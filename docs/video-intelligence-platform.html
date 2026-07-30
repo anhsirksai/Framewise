@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Intelligence Platform</title>
+  <style>
+    :root {
+      --ink: #20252b;
+      --muted: #68717b;
+      --line: #2d3339;
+      --soft-line: #dce1e6;
+      --paper: #ffffff;
+      --canvas: #eef1f3;
+      --blue: #2868a8;
+      --blue-soft: #e7f0f9;
+      --teal: #087f7b;
+      --gold: #a66a12;
+      --red: #a44747;
+      --mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+      --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: var(--canvas); color: var(--ink); font-family: var(--sans); }
+    button { font: inherit; }
+
+    .deck { min-height: 100vh; display: grid; place-items: center; padding: 26px; }
+    .slide {
+      display: none; width: min(1180px, 100%); min-height: min(700px, calc(100vh - 105px));
+      padding: 54px 68px 48px; position: relative; overflow: hidden;
+      background: var(--paper); border: 1px solid #d7dce0; border-radius: 16px;
+      box-shadow: 0 14px 45px rgba(39, 50, 60, .12);
+    }
+    .slide.active { display: flex; flex-direction: column; }
+    .slide::after { content: ""; position: absolute; width: 280px; height: 280px; border-radius: 50%; border: 1px solid rgba(40,104,168,.08); right: -110px; bottom: -130px; pointer-events: none; }
+    .kicker { font: 700 12px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--blue); }
+    h1, h2, h3 { margin: 0; letter-spacing: -.04em; }
+    h1 { margin-top: 21px; max-width: 910px; font-size: clamp(39px, 6vw, 73px); line-height: .99; }
+    h2 { margin-top: 13px; font-size: clamp(31px, 4vw, 51px); line-height: 1.03; }
+    h3 { font-size: 20px; line-height: 1.15; }
+    p { color: var(--muted); line-height: 1.55; }
+    .subtitle { max-width: 740px; margin: 26px 0 0; font-size: 20px; line-height: 1.45; }
+    .brand-line { max-width: 760px; margin: 23px 0 0; color: var(--blue); font-size: clamp(22px, 3vw, 34px); line-height: 1.2; font-weight: 700; letter-spacing: -.035em; }
+    .title-vision { max-width: 660px; margin: 16px 0 0; color: var(--muted); font-size: 16px; line-height: 1.45; }
+    .footer { margin-top: auto; padding-top: 25px; display: flex; justify-content: space-between; gap: 20px; color: #8a939c; font: 12px var(--mono); }
+    .footer span:last-child { text-align: right; }
+
+    .title-slide { justify-content: center; }
+    .title-slide .rule { width: 96px; height: 5px; background: var(--blue); margin: 32px 0 0; }
+    .title-slide .meta { display: flex; gap: 9px; flex-wrap: wrap; margin-top: 38px; }
+    .pill { border: 1px solid var(--soft-line); border-radius: 4px; padding: 7px 10px; color: var(--muted); font: 12px var(--mono); }
+
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 44px; align-items: start; margin-top: 38px; }
+    .quote { border-left: 4px solid var(--blue); padding: 5px 0 5px 21px; font-size: 25px; line-height: 1.3; letter-spacing: -.025em; }
+    .points { display: grid; gap: 12px; }
+    .point { padding: 15px 17px; border: 1px solid var(--soft-line); border-radius: 7px; background: #fbfcfc; }
+    .point strong { display: block; margin-bottom: 4px; }
+    .point span { color: var(--muted); font-size: 14px; line-height: 1.45; }
+
+    .ascii-wrap { margin-top: 34px; padding: 24px 28px; overflow: auto; border: 1px solid #cfd5da; border-radius: 5px; background: #fcfcfc; }
+    pre { margin: 0; color: #22272d; font: 16px/1.7 var(--mono); white-space: pre; }
+    .diagram-note { margin: 16px 0 0; font: 12px/1.5 var(--mono); color: var(--muted); }
+
+    .pipeline { margin-top: 38px; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; gap: 12px; }
+    .box { min-height: 97px; padding: 16px 13px; border: 1.5px solid var(--line); border-radius: 4px; display: grid; place-items: center; text-align: center; background: #fff; }
+    .box strong { font-size: 14px; }
+    .box small { display: block; margin-top: 5px; color: var(--muted); font: 12px var(--mono); }
+    .arrow { text-align: center; font: 24px var(--mono); color: var(--blue); }
+    .pipeline-caption { text-align: center; margin: 15px 0 0; color: var(--muted); font: 12px var(--mono); }
+
+    .layers { display: grid; gap: 15px; margin-top: 31px; }
+    .layer { display: grid; grid-template-columns: 72px 1fr 1fr; gap: 20px; align-items: center; padding: 18px; border: 1px solid var(--soft-line); border-radius: 7px; }
+    .layer-number { width: 44px; height: 44px; display: grid; place-items: center; border: 1.5px solid var(--blue); border-radius: 50%; color: var(--blue); font: 700 18px var(--mono); }
+    .layer p { margin: 0; font-size: 14px; }
+    .layer-outcome { border-left: 1px solid var(--soft-line); padding-left: 20px; font-size: 14px; }
+    .layer-outcome strong { color: var(--teal); }
+
+    .columns-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 35px; }
+    .mini-card { padding: 21px; border: 1px solid var(--soft-line); border-radius: 6px; }
+    .mini-card .index { color: var(--blue); font: 700 12px var(--mono); }
+    .mini-card h3 { margin-top: 12px; }
+    .mini-card ul { margin: 14px 0 0; padding-left: 18px; color: var(--muted); font-size: 14px; line-height: 1.7; }
+
+    .scale-table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 14px; }
+    .scale-table th, .scale-table td { border-bottom: 1px solid var(--soft-line); padding: 13px 11px; text-align: left; vertical-align: top; }
+    .scale-table th { color: var(--blue); font: 700 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+    .scale-table td:first-child { width: 21%; font-weight: 700; }
+    .scale-table td { color: var(--muted); }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 28px; }
+    .metric { padding: 16px; border: 1px solid var(--soft-line); border-radius: 5px; }
+    .metric strong { display: block; color: var(--blue); font: 700 22px var(--mono); }
+    .metric span { color: var(--muted); font-size: 12px; }
+
+    .closing { justify-content: center; }
+    .closing h2 { max-width: 790px; }
+    .closing .principle { margin-top: 34px; max-width: 760px; font-size: 25px; line-height: 1.35; }
+    .closing .next { display: grid; grid-template-columns: repeat(3, 1fr); gap: 13px; margin-top: 33px; }
+    .closing .next div { padding: 15px; border-top: 2px solid var(--blue); color: var(--muted); font-size: 14px; }
+
+    .controls { position: fixed; left: 50%; bottom: 13px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid #d5dbe0; border-radius: 6px; background: rgba(255,255,255,.94); box-shadow: 0 6px 22px rgba(30,40,50,.12); z-index: 4; }
+    .controls button { width: 31px; height: 28px; border: 1px solid var(--soft-line); border-radius: 4px; background: white; color: var(--ink); cursor: pointer; }
+    .controls button:hover { border-color: var(--blue); color: var(--blue); }
+    #counter { min-width: 52px; text-align: center; color: var(--muted); font: 12px var(--mono); }
+
+    @media (max-width: 800px) {
+      .deck { padding: 10px; }
+      .slide { min-height: calc(100vh - 74px); padding: 35px 25px 30px; border-radius: 9px; }
+      .two-col, .columns-3, .scale-grid { grid-template-columns: 1fr; gap: 18px; }
+      .pipeline { grid-template-columns: 1fr; gap: 7px; }
+      .arrow { transform: rotate(90deg); height: 20px; }
+      .layer { grid-template-columns: 55px 1fr; }
+      .layer-outcome { grid-column: 2; border-left: 0; border-top: 1px solid var(--soft-line); padding: 13px 0 0; }
+      .metrics { grid-template-columns: repeat(2, 1fr); }
+      .footer { font-size: 10px; }
+    }
+
+    @media print {
+      body { background: white; }
+      .deck { display: block; padding: 0; }
+      .slide, .slide.active { display: flex; width: 100%; min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; page-break-after: always; }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide title-slide active" data-title="Title">
+      <div class="kicker">Video Intelligence Platform</div>
+      <h1>Framewise</h1>
+      <p class="brand-line">— turn every video into reusable intelligence.</p>
+      <p class="title-vision">From unstructured video to operational intelligence.</p>
+      <p class="subtitle">A scalable foundation for understanding video, creating company-specific marketing content, and discovering patterns across security incidents.</p>
+      <div class="rule"></div>
+      <div class="meta"><span class="pill">TwelveLabs</span><span class="pill">OpenAI</span><span class="pill">Strands</span><span class="pill">Neo4j / AuraDB</span></div>
+      <div class="footer"><span>Product and architecture overview</span><span>01 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Problem">
+      <div class="kicker">02 — The problem</div>
+      <h2>Video is rich, but most of its intelligence is trapped inside a timeline.</h2>
+      <div class="two-col">
+        <div class="quote">Organizations have more video than their teams can watch, understand, compare, or reuse.</div>
+        <div class="points">
+          <div class="point"><strong>Creative knowledge disappears.</strong><span>Teams repeatedly reinvent hooks, pacing, CTAs, and brand decisions already present in prior campaigns.</span></div>
+          <div class="point"><strong>Events are hard to connect.</strong><span>A single incident may span multiple cameras, clips, people, objects, and locations.</span></div>
+          <div class="point"><strong>Search is not enough.</strong><span>Users need relationships, timelines, patterns, and the exact evidence behind an answer.</span></div>
+          <div class="point"><strong>Generative answers need trust.</strong><span>Every recommendation should be traceable to a source video and timestamp.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Problem statement</span><span>02 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Core architecture">
+      <div class="kicker">06 — Core architecture</div>
+      <h2>Two paths. One evidence graph.</h2>
+      <div class="ascii-wrap">
+        <pre>┌────────────────────────────────────────────────────────────────────────────┐
+│                              INGESTION PIPELINE                             │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Video ──► TwelveLabs ──► OpenAI ──► TwelveLabs ──► Neo4j / AuraDB         │
+│           (index +        (structure)   (embed)      (persist)             │
+│            analyze)                                                        │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                CHAT RUNTIME                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  User ──► FastAPI ──► Strands ──► OpenAI (reasoning)                       │
+│                          │                                                 │
+│                          ├──► TwelveLabs (embed / search)                  │
+│                          ├──► Neo4j (graph + vector search)                │
+│                          └──► Frontend graph visualization (NVL)           │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘</pre>
+      </div>
+      <p class="diagram-note">Batch path builds durable intelligence. Interactive path retrieves evidence and orchestrates tools. Both paths preserve source timestamps and provenance.</p>
+      <div class="footer"><span>Reference architecture</span><span>06 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Scalable target architecture">
+      <div class="kicker">07 — Scalable target architecture</div>
+      <h2>Separate the interactive path from the heavy lifting.</h2>
+      <div class="ascii-wrap">
+        <pre>                           ┌──────────────────┐
+                           │ Web / API Clients │
+                           └────────┬─────────┘
+                                    │
+                           ┌────────▼─────────┐
+                           │ API Gateway      │
+                           │ Auth / Rate Limit│
+                           └────────┬─────────┘
+                                    │
+                  ┌─────────────────┼─────────────────┐
+                  │                 │                 │
+          ┌───────▼───────┐ ┌──────▼──────┐ ┌────────▼────────┐
+          │ Chat Service  │ │ Video API  │ │ Review Service  │
+          └───────┬───────┘ └──────┬──────┘ └────────┬────────┘
+                  │                │                 │
+                  │         ┌──────▼──────┐          │
+                  │         │ Job Queue   │          │
+                  │         └──────┬──────┘          │
+                  │                │                 │
+                  │        ┌───────▼────────┐        │
+                  │        │ Ingestion      │        │
+                  │        │ Worker Pool    │        │
+                  │        └───────┬────────┘        │
+                  │                │                 │
+          ┌───────▼────────┐ ┌────▼────────────┐ ┌───▼───────────┐
+          │ Strands Agent  │ │ Video Analysis │ │ Generation    │
+          │ Orchestrator  │ │ Workers        │ │ Workers       │
+          └───────┬────────┘ └────┬───────────┘ └────┬───────────┘
+                  │               │                 │
+                  └───────────────┼─────────────────┘
+                                  │
+                ┌─────────────────▼─────────────────┐
+                │ Retrieval and Knowledge Layer     │
+                │ Neo4j AuraDB + vector indexes     │
+                │ PostgreSQL metadata               │
+                │ Redis cache/session state         │
+                │ Object storage for video/artifacts│
+                └───────────────────────────────────┘</pre>
+      </div>
+      <p class="diagram-note">Interactive requests stay bounded and responsive. Video analysis, generation, and retries scale independently through workers and durable jobs.</p>
+      <div class="footer"><span>Production deployment model</span><span>07 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Product layers">
+      <div class="kicker">03 — The bigger problem</div>
+      <h2>Three product layers. One compounding foundation.</h2>
+      <div class="layers">
+        <div class="layer"><div class="layer-number">1</div><div><h3>Understand video</h3><p>Analyze segments, people, objects, actions, speech, text, style, topics, and relationships.</p></div><div class="layer-outcome"><strong>Foundation:</strong> searchable, time-coded video intelligence.</div></div>
+        <div class="layer"><div class="layer-number">2</div><div><h3>Act on the intelligence</h3><p>Generate marketing briefs and templates, answer questions, compare examples, and validate brand rules.</p></div><div class="layer-outcome"><strong>Workflow:</strong> turn past work into reusable decisions and content.</div></div>
+        <div class="layer"><div class="layer-number">3</div><div><h3>Discover patterns across domains</h3><p>Re-use the same graph and agent primitives for security incidents, investigations, and operational vigilance.</p></div><div class="layer-outcome"><strong>Platform:</strong> one intelligence layer, multiple vertical products.</div></div>
+      </div>
+      <div class="footer"><span>Product expansion strategy</span><span>03 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Marketing studio">
+      <div class="kicker">04 — Product one</div>
+      <h2>Marketing Video Studio: create in the company’s own language.</h2>
+      <div class="pipeline">
+        <div class="box"><strong>Past videos</strong><small>approved examples</small></div><div class="arrow">──►</div>
+        <div class="box"><strong>Style DNA</strong><small>hooks, pacing, tone, CTA</small></div><div class="arrow">──►</div>
+        <div class="box"><strong>Template</strong><small>scene structure + rules</small></div>
+      </div>
+      <div class="pipeline" style="margin-top: 18px; grid-template-columns: 1fr 1fr 1fr 1fr 1fr;">
+        <div class="box"><strong>Brief</strong><small>campaign goal</small></div><div class="arrow">──►</div>
+        <div class="box"><strong>Storyboard</strong><small>scene-by-scene plan</small></div><div class="arrow">──►</div>
+        <div class="box"><strong>Compliance</strong><small>rules + evidence</small></div>
+      </div>
+      <div class="two-col" style="margin-top: 30px;">
+        <div class="point"><strong>Demo question</strong><span>“Create a 30-second launch video in Company A’s style.”</span></div>
+        <div class="point"><strong>Trust layer</strong><span>Every generated scene cites the source segments that influenced it and flags unsupported claims before approval.</span></div>
+      </div>
+      <div class="footer"><span>Vertical one: creative production and brand governance</span><span>04 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Security vigilance">
+      <div class="kicker">05 — Product two</div>
+      <h2>Security Vigilance: turn many clips into one incident story.</h2>
+      <div class="two-col" style="margin-top: 32px;">
+        <div class="ascii-wrap" style="margin-top: 0;">
+          <pre>Camera A ──┐
+Camera B ──┼──► Incident timeline
+Camera C ──┘          │
+                      ▼
+             ┌────────────────┐
+             │ Person / object│
+             │ Action / place │
+             │ Time sequence  │
+             └───────┬────────┘
+                     ▼
+                Similar cases
+                and patterns</pre>
+        </div>
+        <div>
+          <div class="point"><strong>Cross-video reconstruction</strong><span>Connect multiple clips from one theft into a single time-ordered event.</span></div>
+          <div class="point" style="margin-top: 12px;"><strong>Pattern discovery</strong><span>Find recurring combinations: distraction, vehicle exit, location, time of day, and sequence of actions.</span></div>
+          <div class="point" style="margin-top: 12px;"><strong>Analyst evidence</strong><span>Return the linked clips and exact time windows so a human can verify the conclusion.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Vertical two: security investigations and vigilance</span><span>05 / 08</span></div>
+    </section>
+
+    <section class="slide" data-title="Scale and close">
+      <div class="kicker">08 — Scale-ready design</div>
+      <h2>Scale the workload, not the request timeout.</h2>
+      <table class="scale-table">
+        <thead><tr><th>Concern</th><th>Design choice</th><th>What to demonstrate</th></tr></thead>
+        <tbody>
+          <tr><td>Long-running video jobs</td><td>Queue-based state machine: upload → index → analyze → structure → embed → persist.</td><td>Retries, checkpoints, resumability</td></tr>
+          <tr><td>Tenant isolation</td><td>Organization/workspace scope enforced in the repository and every graph query.</td><td>Secure multi-tenant retrieval</td></tr>
+          <tr><td>Model evolution</td><td>Persist model, prompt, schema, confidence, and source metadata with every fact.</td><td>Reprocessing without losing lineage</td></tr>
+          <tr><td>Interactive latency</td><td>Bounded Strands tools, hybrid retrieval, caching, and read-optimized graph projections.</td><td>p50/p95 latency and cost</td></tr>
+          <tr><td>Trust and operations</td><td>Evidence citations, audit events, traces, quotas, dead-letter queues, and human review.</td><td>Failure-mode walkthrough</td></tr>
+        </tbody>
+      </table>
+      <div class="metrics"><div class="metric"><strong>p95</strong><span>answer latency</span></div><div class="metric"><strong>precision@k</strong><span>retrieval quality</span></div><div class="metric"><strong>$/video</strong><span>unit economics</span></div><div class="metric"><strong>evidence %</strong><span>grounded answers</span></div></div>
+      <div class="footer"><span>Production path and engineering proof</span><span>08 / 08</span></div>
+    </section>
+  </main>
+
+  <div class="controls" aria-label="Slide controls">
+    <button id="prev" aria-label="Previous slide">←</button>
+    <span id="counter">1 / 8</span>
+    <button id="next" aria-label="Next slide">→</button>
+    <button id="print" aria-label="Print presentation">⎙</button>
+  </div>
+
+  <script>
+    (() => {
+      const deck = document.querySelector('.deck');
+      const originalSlides = [...deck.querySelectorAll('.slide')];
+
+      // Presentation order: problem, product layers, marketing, security,
+      // core architecture, scalable architecture, and scale close.
+      const presentationOrder = [0, 1, 4, 5, 6, 2, 3, 7];
+      presentationOrder.forEach(index => deck.appendChild(originalSlides[index]));
+
+      const slides = [...deck.querySelectorAll('.slide')];
+      slides.forEach((slide, index) => {
+        const pageNumber = slide.querySelector('.footer span:last-child');
+        if (pageNumber) pageNumber.textContent = `${index + 1} / ${slides.length}`;
+      });
+      const counter = document.querySelector('#counter');
+      counter.textContent = `1 / ${slides.length}`;
+      let current = 0;
+
+      function show(index) {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+        counter.textContent = `${current + 1} / ${slides.length}`;
+        document.title = `${slides[current].dataset.title} — Video Intelligence Platform`;
+        history.replaceState(null, '', `#slide-${current + 1}`);
+      }
+
+      document.querySelector('#prev').addEventListener('click', () => show(current - 1));
+      document.querySelector('#next').addEventListener('click', () => show(current + 1));
+      document.querySelector('#print').addEventListener('click', () => window.print());
+      document.addEventListener('keydown', event => {
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(current + 1); }
+        if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+        if (event.key.toLowerCase() === 'p') window.print();
+      });
+
+      const match = window.location.hash.match(/slide-(\d+)/);
+      if (match) show(Number(match[1]) - 1);
+    })();
+  </script>
+</body>
+</html>
