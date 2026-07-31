@@ -59,6 +59,7 @@ class GenerateBriefRequest(BaseModel):
     prompt: str = Field(..., max_length=2000)
     theme: str | None = Field(default=None, max_length=120)
     target_duration_sec: int = Field(default=45, ge=10, le=180)
+    render: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -447,7 +448,17 @@ async def generate_brief(request: GenerateBriefRequest):
     )
     theme_id = f"theme-{theme_key}"
     rough_cut_id = f"rough-cut-{_uuid.uuid4()}"
+    rough_cut["id"] = rough_cut_id
     video_ids = [row["video_id"] for row in context if row.get("video_id")]
+    rendered_video = None
+    render_error = None
+    if request.render:
+        try:
+            from app.video_renderer import render_rough_cut
+
+            rendered_video = await asyncio.to_thread(render_rough_cut, rough_cut)
+        except Exception as exc:
+            render_error = str(exc)
 
     await execute_cypher(
         """
@@ -463,6 +474,9 @@ async def generate_brief(request: GenerateBriefRequest):
         SET rc.prompt = $prompt,
             rc.theme = $name,
             rc.plan = $plan,
+            rc.rendered_url = $rendered_url,
+            rc.rendered_path = $rendered_path,
+            rc.render_error = $render_error,
             rc.created_at = datetime(),
             rc.domain = $domain
         MERGE (t)-[:GENERATED]->(rc)
@@ -478,6 +492,9 @@ async def generate_brief(request: GenerateBriefRequest):
             "prompt": request.prompt,
             "rough_cut_id": rough_cut_id,
             "plan": json.dumps(rough_cut, default=str),
+            "rendered_url": (rendered_video or {}).get("url"),
+            "rendered_path": (rendered_video or {}).get("path"),
+            "render_error": render_error,
             "video_ids": video_ids,
             "domain": settings.domain_id,
         },
@@ -485,9 +502,10 @@ async def generate_brief(request: GenerateBriefRequest):
     )
     return {
         "rough_cut": {
-            "id": rough_cut_id,
             **rough_cut,
             "clip_candidates": clips,
+            "rendered_video": rendered_video,
+            "render_error": render_error,
         },
         "theme": {
             "id": theme_id,

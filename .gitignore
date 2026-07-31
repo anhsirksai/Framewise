@@ -28,3 +28,5 @@ Thumbs.db
 # Data
 data/documents/*.json
 data/documents/*.txt
+data/generated/*
+!data/generated/.gitkeep

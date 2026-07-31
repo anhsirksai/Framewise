@@ -45,6 +45,11 @@ interface RoughCut {
   scenes?: RoughCutScene[];
   do_rules?: string[];
   dont_rules?: string[];
+  rendered_video?: {
+    url: string;
+    path: string;
+  } | null;
+  render_error?: string | null;
 }
 
 function fmt(sec?: number | null): string {
@@ -52,6 +57,11 @@ function fmt(sec?: number | null): string {
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+function artifactUrl(path: string): string {
+  if (path.startsWith("http")) return path;
+  return `${API_BASE.replace("/api", "")}${path}`;
 }
 
 export function GenerationStudio() {
@@ -178,6 +188,33 @@ export function GenerationStudio() {
           <Box mt={1} p={2} bg="purple.50" borderWidth="1px" borderColor="purple.100" borderRadius="md">
             <Text fontSize="sm" fontWeight="bold">{roughCut.title}</Text>
             <Text fontSize="xs" color="gray.700" mt={1}>{roughCut.storyline}</Text>
+
+            {roughCut.rendered_video?.url && (
+              <Box mt={2}>
+                {/* eslint-disable-next-line jsx-a11y/media-has-caption */}
+                <video
+                  src={artifactUrl(roughCut.rendered_video.url)}
+                  controls
+                  style={{ width: "100%", borderRadius: 6, background: "black" }}
+                />
+                <Button
+                  asChild
+                  size="xs"
+                  variant="outline"
+                  mt={2}
+                >
+                  <a href={artifactUrl(roughCut.rendered_video.url)} download>
+                    Download MP4
+                  </a>
+                </Button>
+              </Box>
+            )}
+
+            {roughCut.render_error && (
+              <Text fontSize="xs" color="orange.600" mt={2}>
+                Render not available: {roughCut.render_error}
+              </Text>
+            )}
 
             {roughCut.theme_dna && roughCut.theme_dna.length > 0 && (
               <HStack gap={1} mt={2} flexWrap="wrap">

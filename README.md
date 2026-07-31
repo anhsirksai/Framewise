@@ -106,6 +106,7 @@ Prerequisites:
 
 - Python 3.10 to 3.13 with `uv`
 - Node.js 18+
+- `ffmpeg` for rendering generated rough cuts into MP4 files
 - Neo4j local Docker or Neo4j Aura
 - OpenAI API key
 - TwelveLabs API key
@@ -195,20 +196,20 @@ Open:
 
 The right-side Studio panel has a `Generate Rough Cut` button. It follows the
 Rodeo product pattern: describe the story you want, search indexed video moments
-by meaning, assemble those moments into scenes, and store the reusable theme in
-Neo4j.
+by meaning, assemble those moments into scenes, store the reusable theme in
+Neo4j, and render a local MP4 when `ffmpeg` is available.
 
 Backend endpoints:
 
 | Endpoint | Purpose |
 |---|---|
 | `GET /api/generation/themes` | List saved reusable themes |
-| `POST /api/generate/rough-cut` | Create a rough cut plan from a prompt, theme, and local indexed videos |
+| `POST /api/generate/rough-cut` | Create a rough cut plan and attempt MP4 rendering from local indexed videos |
 | `POST /api/generate/brief` | Compatibility alias for rough-cut generation |
 
-This does not render a final MP4 yet. It creates the rough cut plan, cited source
-clips, theme DNA, and do/don't rules. The next production step is exporting that
-plan to a real editor format such as EDL, OTIO, or XML.
+Rendered videos are written to `data/generated/` and served by the backend under
+`/artifacts/<file>.mp4`. If `ffmpeg` is missing, the endpoint still returns the
+rough cut plan and includes a `render_error` explaining what is missing.
 
 ## Architecture
 

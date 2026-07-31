@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
 from app.context_graph_client import connect_neo4j, close_neo4j, is_connected
@@ -55,6 +56,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.mount("/artifacts", StaticFiles(directory="../data/generated", check_dir=False), name="artifacts")
 
 
 @app.get("/health")
