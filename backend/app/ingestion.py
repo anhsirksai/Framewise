@@ -76,6 +76,82 @@ def _norm_key(name: str) -> str:
     return " ".join(name.strip().lower().split())
 
 
+# ---------------------------------------------------------------------------
+# Resolution guard — TwelveLabs accepts 360x360 up to 5184x2160. Phone videos
+# (4K/8K) exceed this, so we probe local files and downscale with ffmpeg
+# before upload instead of failing with video_resolution_too_high.
+# ---------------------------------------------------------------------------
+
+_TL_MAX_LONG_SIDE = 5184
+_TL_MAX_SHORT_SIDE = 2160
+_TARGET_LONG_SIDE = 1920  # 1080p-class output: fast to index, plenty for search
+
+
+def _probe_resolution(path: str) -> tuple[int, int] | None:
+    """Return (width, height) of the first video stream, or None if unknown."""
+    import shutil
+    import subprocess
+
+    if not shutil.which("ffprobe"):
+        log.warning("ffprobe not available — skipping resolution check for %s", path)
+        return None
+    try:
+        out = subprocess.run(
+            ["ffprobe", "-v", "error", "-select_streams", "v:0",
+             "-show_entries", "stream=width,height", "-of", "csv=p=0", path],
+            capture_output=True, text=True, timeout=60, check=True,
+        ).stdout.strip()
+        w, h = (int(x) for x in out.split(",")[:2])
+        return w, h
+    except Exception as e:
+        log.warning("ffprobe failed for %s: %s", path, e)
+        return None
+
+
+def downscale_if_needed(path: str, on_stage: StageCallback | None = None) -> str:
+    """Downscale a local video that exceeds TwelveLabs' resolution limits.
+
+    Returns the path to use for upload: the original when in bounds, or a
+    transcoded copy (same filename, sibling temp dir) when it was too large.
+    """
+    import shutil
+    import subprocess
+    import tempfile
+
+    res = _probe_resolution(path)
+    if not res:
+        return path
+    w, h = res
+    long_side, short_side = max(w, h), min(w, h)
+    if long_side <= _TL_MAX_LONG_SIDE and short_side <= _TL_MAX_SHORT_SIDE:
+        return path
+
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError(
+            f"Video is {w}x{h}, above the TwelveLabs limit ({_TL_MAX_SHORT_SIDE}p), "
+            "and ffmpeg is not installed to downscale it. Please upload a version "
+            "at 2160p or below."
+        )
+
+    if on_stage:
+        on_stage("transcoding", f"Video is {w}x{h} — downscaling to fit the 2160p limit")
+    log.info("Downscaling %s (%dx%d) to long side %d ...", path, w, h, _TARGET_LONG_SIDE)
+
+    out_dir = tempfile.mkdtemp(prefix="framewise_transcode_")
+    out_path = os.path.join(out_dir, os.path.basename(path))
+    # Scale the long side down to the target, keep aspect, force even dims for h264.
+    scale = (f"scale={_TARGET_LONG_SIDE}:-2" if w >= h else f"scale=-2:{_TARGET_LONG_SIDE}")
+    subprocess.run(
+        ["ffmpeg", "-y", "-v", "error", "-i", path,
+         "-vf", scale, "-c:v", "libx264", "-preset", "veryfast", "-crf", "23",
+         "-c:a", "aac", "-movflags", "+faststart", out_path],
+        capture_output=True, text=True, timeout=1800, check=True,
+    )
+    new_res = _probe_resolution(out_path)
+    log.info("Downscaled to %s (%s)", out_path, f"{new_res[0]}x{new_res[1]}" if new_res else "?")
+    return out_path
+
+
 def structure_with_llm(pegasus_text: str) -> dict:
     """Turn Pegasus prose into schema-validated video and segment data.
 
@@ -260,15 +336,26 @@ async def ingest_source(index_id: str, source: str, force: bool = False,
                                         existing.get("duration_sec"), on_stage)
         return {"status": "completed", "video_id": video_id, "title": title, "dim": dim}
 
+    # Oversized local videos (4K/8K phone footage) get downscaled first —
+    # TwelveLabs rejects anything above 2160p with video_resolution_too_high.
+    upload_path = source
+    if is_file:
+        upload_path = await asyncio.to_thread(downscale_if_needed, source, stage)
+
     stage("indexing", "Uploading and indexing with TwelveLabs (the slow part)")
     log.info("Indexing %s: %s ...", "file" if is_file else "url", source)
     cb = lambda st: stage("indexing", f"TwelveLabs status: {st}")  # noqa: E731
-    if is_file:
-        info = await asyncio.to_thread(
-            lambda: tl.ingest_video(index_id, video_file=source, on_update=cb))
-    else:
-        info = await asyncio.to_thread(
-            lambda: tl.ingest_video(index_id, video_url=source, on_update=cb))
+    try:
+        if is_file:
+            info = await asyncio.to_thread(
+                lambda: tl.ingest_video(index_id, video_file=upload_path, on_update=cb))
+        else:
+            info = await asyncio.to_thread(
+                lambda: tl.ingest_video(index_id, video_url=source, on_update=cb))
+    finally:
+        if upload_path != source:
+            import shutil
+            shutil.rmtree(os.path.dirname(upload_path), ignore_errors=True)
 
     video_id = info.get("video_id")
     if not video_id:
