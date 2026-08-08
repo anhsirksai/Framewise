@@ -1,331 +1,281 @@
-"use client";
+import type { Metadata } from "next";
+import Link from "next/link";
+import styles from "./landing.module.css";
 
-import { useState, useCallback, useRef, useEffect } from "react";
-import { Box, Flex, Heading, Text, IconButton, HStack, Spinner, VStack } from "@chakra-ui/react";
-import { MessageSquare, Network, FileText, Compass, CloudUpload } from "lucide-react";
-import dynamic from "next/dynamic";
-import NextLink from "next/link";
-import { ChatInterface } from "@/components/ChatInterface";
-import { IngestView } from "@/components/IngestView";
-const ContextGraphView = dynamic(
-  () => import("@/components/ContextGraphView").then((mod) => mod.ContextGraphView),
-  {
-    ssr: false,
-    loading: () => (
-      <Flex align="center" justify="center" h="100%" color="gray.400">
-        <Spinner size="lg" />
-      </Flex>
-    ),
-  }
-);
-import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { GenerationStudio } from "@/components/GenerationStudio";
-import { VideoBrowser } from "@/components/VideoBrowser";
-import { DOMAIN, API_BASE } from "@/lib/config";
-import type { GraphData } from "@/lib/config";
+export const metadata: Metadata = {
+  title: "Framewise — every video, every receipt, remembered forever",
+  description:
+    "Framewise turns unstructured video and documents into a permanent, searchable evidence graph. Retrieve a bill from 20 years ago with one search.",
+};
 
-type PanelId = "chat" | "graph" | "details";
-type ViewId = "explore" | "ingest";
-
-function SidebarButton({
-  label,
-  active,
-  onClick,
-  children,
-}: {
-  label: string;
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
+export default function LandingPage() {
   return (
-    <VStack gap={0.5}>
-      <IconButton
-        aria-label={label}
-        variant={active ? "solid" : "ghost"}
-        colorPalette={active ? "blue" : "gray"}
-        color={active ? "white" : "gray.400"}
-        size="sm"
-        onClick={onClick}
-      >
-        {children}
-      </IconButton>
-      <Text fontSize="2xs" color={active ? "blue.300" : "gray.500"}>
-        {label}
-      </Text>
-    </VStack>
-  );
-}
+    <div className={styles.page}>
+      {/* ---- Nav ---- */}
+      <nav className={styles.nav}>
+        <div className={styles.navInner}>
+          <Link href="/" className={styles.wordmark}>
+            Framewise
+          </Link>
+          <Link href="/app" className={styles.btnPrimary}>
+            Try it out
+          </Link>
+        </div>
+      </nav>
 
-function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      const startX = e.clientX;
-      function onMouseMove(ev: MouseEvent) {
-        onDrag(ev.clientX - startX);
-      }
-      function onMouseUp() {
-        document.removeEventListener("mousemove", onMouseMove);
-        document.removeEventListener("mouseup", onMouseUp);
-        document.body.style.cursor = "";
-        document.body.style.userSelect = "";
-      }
-      document.body.style.cursor = "col-resize";
-      document.body.style.userSelect = "none";
-      document.addEventListener("mousemove", onMouseMove);
-      document.addEventListener("mouseup", onMouseUp);
-    },
-    [onDrag],
-  );
+      {/* ---- Hero ---- */}
+      <header className={styles.hero}>
+        <div className={styles.container}>
+          <span className={styles.kicker}>Video Intelligence Platform</span>
+          <h1 className={styles.heroTitle}>
+            Every video, every receipt —{" "}
+            <em className={styles.accent}>remembered forever.</em>
+          </h1>
+          <p className={styles.heroSub}>
+            Framewise turns unstructured video and documents into a permanent,
+            searchable evidence graph. Ask a question in plain language and get
+            the exact moment, document, or pattern back — with the proof
+            attached.
+          </p>
+          <div className={styles.heroActions}>
+            <Link href="/app" className={styles.btnClay}>
+              Try it out
+            </Link>
+            <a href="#use-cases" className={styles.btnGhost}>
+              See use cases
+            </a>
+          </div>
+          <div className={styles.pills}>
+            <span className={styles.pillHero}>Claude</span>
+            <span className={styles.pill}>TwelveLabs</span>
+            <span className={styles.pill}>Strands</span>
+            <span className={styles.pill}>Neo4j / AuraDB</span>
+          </div>
+        </div>
+      </header>
 
-  return (
-    <Box
-      w="4px"
-      cursor="col-resize"
-      bg="transparent"
-      _hover={{ bg: "blue.200" }}
-      transition="background 0.15s"
-      flexShrink={0}
-      display={{ base: "none", lg: "block" }}
-      onMouseDown={handleMouseDown}
-    />
-  );
-}
+      {/* ---- Problem ---- */}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <span className={styles.kicker}>The problem</span>
+          <h2 className={styles.sectionTitle}>
+            Rich media is full of answers. Its intelligence is{" "}
+            <em className={styles.accent}>trapped in a timeline.</em>
+          </h2>
+          <p className={styles.sectionSub}>
+            Organizations — and households — have more recorded evidence than
+            anyone can watch, compare, or find again.
+          </p>
+          <div className={styles.grid}>
+            <div className={styles.card}>
+              <h3>Creative knowledge disappears</h3>
+              <p>
+                Teams reinvent hooks, pacing, CTAs, and brand decisions already
+                present in prior campaigns.
+              </p>
+            </div>
+            <div className={styles.card}>
+              <h3>Events are hard to connect</h3>
+              <p>
+                A single incident may span multiple cameras, clips, people,
+                objects, and locations.
+              </p>
+            </div>
+            <div className={styles.card}>
+              <h3>Search is not enough</h3>
+              <p>
+                Users need relationships, timelines, patterns, and the exact
+                evidence behind an answer.
+              </p>
+            </div>
+            <div className={styles.card}>
+              <h3>Generative answers need trust</h3>
+              <p>
+                Every recommendation should be traceable to a source document
+                and timestamp.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-export default function Home() {
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [activePanel, setActivePanel] = useState<PanelId>("chat");
-  const [activeView, setActiveView] = useState<ViewId>("explore");
-  const [backendStatus, setBackendStatus] = useState<"ok" | "degraded" | "offline">("offline");
-  const [leftWidth, setLeftWidth] = useState(400);
-  const [rightWidth, setRightWidth] = useState(350);
-  const leftBaseRef = useRef(400);
-  const rightBaseRef = useRef(350);
+      {/* ---- How it works ---- */}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <span className={styles.kicker}>How it works</span>
+          <h2 className={styles.sectionTitle}>
+            Two paths. <em className={styles.accent}>One evidence graph.</em>
+          </h2>
+          <p className={styles.sectionSub}>
+            TwelveLabs watches and indexes your media, Claude structures it
+            into entities, topics, and time-coded segments, and everything
+            persists in a Neo4j graph with full provenance. A Strands agent
+            answers your questions with evidence — not just answers.
+          </p>
+          <div className={styles.pipeline}>
+            <div className={styles.pipeBox}>
+              <div>
+                <strong>Capture</strong>
+                <small>videos, bills, receipts, footage</small>
+              </div>
+            </div>
+            <div className={styles.pipeArrow}>→</div>
+            <div className={styles.pipeBox}>
+              <div>
+                <strong>Understand</strong>
+                <small>index, structure, embed, persist</small>
+              </div>
+            </div>
+            <div className={styles.pipeArrow}>→</div>
+            <div className={styles.pipeBox}>
+              <div>
+                <strong>Retrieve</strong>
+                <small>ask in plain language, get evidence</small>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  const [askAboutInput, setAskAboutInput] = useState<string | null>(null);
+      {/* ---- Product layers ---- */}
+      <section className={styles.section}>
+        <div className={styles.container}>
+          <span className={styles.kicker}>The platform</span>
+          <h2 className={styles.sectionTitle}>
+            Three product layers.{" "}
+            <em className={styles.accent}>One compounding foundation.</em>
+          </h2>
+          <div className={styles.layer}>
+            <div className={styles.layerNum}>1</div>
+            <div>
+              <h3>Understand media</h3>
+              <p>
+                Analyze segments, people, objects, actions, speech, text,
+                style, topics, and relationships.
+              </p>
+            </div>
+            <div className={styles.layerOutcome}>
+              <strong>Foundation:</strong> searchable, time-coded intelligence.
+            </div>
+          </div>
+          <div className={styles.layer}>
+            <div className={styles.layerNum}>2</div>
+            <div>
+              <h3>Act on the intelligence</h3>
+              <p>
+                Generate marketing briefs and templates, answer questions,
+                retrieve decades-old receipts, and validate brand rules.
+              </p>
+            </div>
+            <div className={styles.layerOutcome}>
+              <strong>Workflow:</strong> turn past records into reusable
+              decisions and claims.
+            </div>
+          </div>
+          <div className={styles.layer}>
+            <div className={styles.layerNum}>3</div>
+            <div>
+              <h3>Discover patterns across domains</h3>
+              <p>
+                Reuse the same graph and agent primitives for security
+                incidents, investigations, and operational vigilance.
+              </p>
+            </div>
+            <div className={styles.layerOutcome}>
+              <strong>Platform:</strong> one intelligence layer, multiple
+              vertical products.
+            </div>
+          </div>
+        </div>
+      </section>
 
-  const handleGraphUpdate = useCallback((data: GraphData) => {
-    setGraphData(data);
-  }, []);
+      {/* ---- Use cases ---- */}
+      <section className={styles.section} id="use-cases">
+        <div className={styles.container}>
+          <span className={styles.kicker}>Use cases</span>
+          <h2 className={styles.sectionTitle}>
+            One memory. <em className={styles.accent}>Many products.</em>
+          </h2>
 
-  const handleAskAbout = useCallback((entityName: string) => {
-    setAskAboutInput(`Tell me about ${entityName}`);
-    setActivePanel("chat");
-  }, []);
+          {/* Featured: HSA */}
+          <div className={styles.featured}>
+            <span className={styles.badge}>Featured use case</span>
+            <h3>
+              HSA Receipt Recall — fetch a bill from{" "}
+              <em className={styles.accent}>20 years ago</em> with one search.
+            </h3>
+            <blockquote>
+              HSA reimbursements have no deadline. The receipt that proves your
+              claim shouldn&apos;t have one either.
+            </blockquote>
+            <p>
+              The IRS lets you claim an HSA medical expense years — even
+              decades — after you paid it, tax-free, as long as you can produce
+              the bill. Almost no one keeps a searchable record that long, so
+              the savings are left on the table. With Framewise, every medical
+              bill and receipt is ingested, understood, and stored in the
+              evidence graph with full provenance. Ask{" "}
+              <em>&ldquo;fetch the bill for my knee MRI from 2005&rdquo;</em>{" "}
+              and get the exact document back — ready to claim.
+            </p>
+          </div>
 
-  // Poll backend health every 60 seconds with retry on initial load
-  useEffect(() => {
-    async function checkHealth(retries = 3, delay = 1000) {
-      for (let attempt = 0; attempt < retries; attempt++) {
-        try {
-          const res = await fetch(`${API_BASE.replace("/api", "")}/health`, {
-            signal: AbortSignal.timeout(30000),
-          });
-          const data = await res.json();
-          setBackendStatus(data.status === "ok" ? "ok" : "degraded");
-          return;
-        } catch {
-          if (attempt < retries - 1) {
-            await new Promise(r => setTimeout(r, delay * (attempt + 1)));
-          }
-        }
-      }
-      setBackendStatus("offline");
-    }
-    checkHealth();
-    const interval = setInterval(() => checkHealth(1), 60000);
-    return () => clearInterval(interval);
-  }, []);
+          {/* Other use cases */}
+          <div className={styles.grid3}>
+            <div className={styles.card}>
+              <h3>Marketing Video Studio</h3>
+              <p>
+                Learn a company&apos;s style DNA — hooks, pacing, tone, CTA —
+                from past campaigns, then draft new storyboards in that voice.
+                Every generated scene cites the source segments that influenced
+                it.
+              </p>
+            </div>
+            <div className={styles.card}>
+              <h3>Security Vigilance</h3>
+              <p>
+                Stitch clips from many cameras into one time-ordered incident
+                story. Find recurring patterns — distraction, vehicle exit,
+                location, time of day — across cases, with linked evidence.
+              </p>
+            </div>
+            <div className={styles.card}>
+              <h3>Household &amp; personal records</h3>
+              <p>
+                Warranties, home repairs, insurance claims, tax documents — the
+                same pipeline that recalls a 20-year-old HSA bill keeps every
+                household record one question away.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
 
-  const handleLeftDrag = useCallback((delta: number) => {
-    setLeftWidth(Math.min(600, Math.max(280, leftBaseRef.current + delta)));
-  }, []);
+      {/* ---- Final CTA ---- */}
+      <section className={styles.cta}>
+        <div className={styles.container}>
+          <h2 className={styles.ctaTitle}>
+            Turn every video into{" "}
+            <em className={styles.accent}>reusable intelligence.</em>
+          </h2>
+          <p className={styles.ctaSub}>
+            Chat with your evidence graph, explore the visualization, and see
+            provenance-backed answers in action.
+          </p>
+          <div className={styles.ctaActions}>
+            <Link href="/app" className={styles.btnClay}>
+              Try it out
+            </Link>
+          </div>
+        </div>
+      </section>
 
-  const handleRightDrag = useCallback((delta: number) => {
-    setRightWidth(Math.min(600, Math.max(280, rightBaseRef.current - delta)));
-  }, []);
-
-  // Update base refs when drag ends (width stabilizes)
-  useEffect(() => {
-    leftBaseRef.current = leftWidth;
-  }, [leftWidth]);
-  useEffect(() => {
-    rightBaseRef.current = rightWidth;
-  }, [rightWidth]);
-
-  return (
-    <Flex direction="column" h="100dvh">
-      {/* Header */}
-      <Flex bg="gray.900" color="white" px={6} py={3} justify="space-between" align="center">
-        <Box
-          asChild
-          cursor="pointer"
-          _hover={{ opacity: 0.8 }}
-          transition="opacity 0.15s"
-        >
-          <NextLink href="/landing" title="Go to home page" aria-label="Go to home page">
-            <Heading size="md">
-🎬 {DOMAIN.name}
-            </Heading>
-            <Text fontSize="sm" color="gray.400">
-              {DOMAIN.tagline}
-            </Text>
-          </NextLink>
-        </Box>
-        <HStack gap={2}>
-          <Box
-            w={3}
-            h={3}
-            borderRadius="full"
-            bg={
-              backendStatus === "ok"
-                ? "green.400"
-                : backendStatus === "degraded"
-                  ? "yellow.400"
-                  : "red.400"
-            }
-            title={
-              backendStatus === "ok"
-                ? "Backend connected"
-                : backendStatus === "degraded"
-                  ? "Backend connected (Neo4j unavailable)"
-                  : "Backend offline"
-            }
-          />
-          <Text fontSize="xs" color="gray.500">
-            {backendStatus === "ok"
-              ? "Connected"
-              : backendStatus === "degraded"
-                ? "Degraded"
-                : "Offline"}
-          </Text>
-        </HStack>
-      </Flex>
-
-      {/* Body: left sidebar + active view */}
-      <Flex flex={1} overflow="hidden">
-        {/* Sidebar navigation */}
-        <VStack
-          as="nav"
-          aria-label="Main navigation"
-          bg="gray.900"
-          px={2}
-          py={4}
-          gap={4}
-          flexShrink={0}
-          borderRight="1px solid"
-          borderColor="gray.700"
-        >
-          <SidebarButton label="Explore" active={activeView === "explore"} onClick={() => setActiveView("explore")}>
-            <Compass size={18} />
-          </SidebarButton>
-          <SidebarButton label="Ingest" active={activeView === "ingest"} onClick={() => setActiveView("ingest")}>
-            <CloudUpload size={18} />
-          </SidebarButton>
-        </VStack>
-
-        {/* Ingest view */}
-        <Box flex={1} overflow="hidden" display={activeView === "ingest" ? "block" : "none"}>
-          <IngestView />
-        </Box>
-
-        {/* Explore view - 3 panel layout (kept mounted to preserve chat/graph state) */}
-      <Flex as="main" flex={1} overflow="hidden" display={activeView === "explore" ? "flex" : "none"}>
-        {/* Left panel: Chat */}
-        <Box
-          as="section"
-          aria-label="Chat"
-          w={{ base: "100%", lg: `${leftWidth}px` }}
-          minW={{ lg: "280px" }}
-          overflow="auto"
-          flexShrink={0}
-          display={{ base: activePanel === "chat" ? "block" : "none", lg: "block" }}
-        >
-          <ChatInterface
-              onGraphUpdate={handleGraphUpdate}
-              externalInput={askAboutInput}
-              onExternalInputConsumed={() => setAskAboutInput(null)}
-            />
-        </Box>
-
-        <ResizeHandle onDrag={handleLeftDrag} />
-
-        {/* Center panel: Graph visualization */}
-        <Box
-          as="section"
-          aria-label="Graph visualization"
-          flex={1}
-          bg="gray.50"
-          display={{ base: activePanel === "graph" ? "block" : "none", lg: "block" }}
-        >
-          <ErrorBoundary fallbackMessage="Graph visualization error">
-            <ContextGraphView externalGraphData={graphData} onAskAbout={handleAskAbout} />
-          </ErrorBoundary>
-        </Box>
-
-        <ResizeHandle onDrag={handleRightDrag} />
-
-        {/* Right panel: Generation + videos */}
-        <Box
-          as="aside"
-          aria-label="Details"
-          w={{ base: "100%", lg: `${rightWidth}px` }}
-          minW={{ lg: "280px" }}
-          overflow="hidden"
-          flexShrink={0}
-          display={{ base: activePanel === "details" ? "block" : "none", lg: "block" }}
-        >
-          <Flex direction="column" h="100%">
-            <Box px={4} py={3} borderBottom="1px solid" borderColor="gray.200">
-              <Heading size="sm">Studio</Heading>
-            </Box>
-            <GenerationStudio />
-            <Box px={4} py={3} borderBottom="1px solid" borderColor="gray.200">
-              <Heading size="sm">Videos</Heading>
-            </Box>
-            <Box flex={1} overflow="hidden">
-              <VideoBrowser />
-            </Box>
-          </Flex>
-        </Box>
-      </Flex>
-      </Flex>
-
-      {/* Mobile bottom tab bar — hidden on desktop */}
-      <HStack
-        display={{ base: "flex", lg: "none" }}
-        justify="space-around"
-        py={2}
-        borderTop="1px solid"
-        borderColor="gray.200"
-        bg="white"
-      >
-        <IconButton
-          aria-label="Chat panel"
-          variant={activePanel === "chat" ? "solid" : "ghost"}
-          size="sm"
-          onClick={() => setActivePanel("chat")}
-        >
-          <MessageSquare size={18} />
-        </IconButton>
-        <IconButton
-          aria-label="Graph panel"
-          variant={activePanel === "graph" ? "solid" : "ghost"}
-          size="sm"
-          onClick={() => setActivePanel("graph")}
-        >
-          <Network size={18} />
-        </IconButton>
-        <IconButton
-          aria-label="Details panel"
-          variant={activePanel === "details" ? "solid" : "ghost"}
-          size="sm"
-          onClick={() => setActivePanel("details")}
-        >
-          <FileText size={18} />
-        </IconButton>
-      </HStack>
-    </Flex>
+      <div className={styles.container}>
+        <footer className={styles.footer}>
+          <span>Framewise — Video Intelligence Platform</span>
+          <span>TwelveLabs · Claude · Strands · Neo4j</span>
+        </footer>
+      </div>
+    </div>
   );
 }

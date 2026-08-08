@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 
-const BASE_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+// The app moved from / to /app (the landing page now lives at /).
+const BASE_URL = (process.env.FRONTEND_URL || "http://localhost:3000") + "/app";
 const API_URL = process.env.API_URL || "http://localhost:8000";
 
 // Timeout for LLM responses — these can be slow
