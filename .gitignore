@@ -30,3 +30,5 @@ data/documents/*.json
 data/documents/*.txt
 data/generated/*
 !data/generated/.gitkeep
+data/videos/*.mp4
+data/*.pdf

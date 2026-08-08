@@ -39,11 +39,41 @@ class Settings(BaseSettings):
     aws_region: str = ""
     aws_profile: str = ""
 
+    # --- LLM provider toggle ------------------------------------------------
+    # Switch the reasoning/extraction brain between "openai" and "anthropic".
+    llm_provider: Literal["openai", "anthropic"] = "openai"
+
     # --- OpenAI (agent reasoning + structured video extraction) ------------
     openai_api_key: str = ""
     openai_model: str = "gpt-5.6"
     openai_extraction_model: str = "gpt-5.6-terra"
     openai_reasoning_effort: Literal["none", "low", "medium", "high", "xhigh", "max"] = "low"
+
+    # --- Anthropic / Claude (used when LLM_PROVIDER=anthropic) --------------
+    anthropic_api_key: str = ""
+    anthropic_model: str = "claude-opus-4-8"
+    anthropic_extraction_model: str = "claude-opus-4-8"
+
+    @property
+    def llm_api_key(self) -> str:
+        """API key for the active provider."""
+        if self.llm_provider == "anthropic":
+            return self.anthropic_api_key
+        return self.openai_api_key
+
+    @property
+    def llm_model(self) -> str:
+        """Chat/reasoning model for the active provider."""
+        if self.llm_provider == "anthropic":
+            return self.anthropic_model
+        return self.openai_model
+
+    @property
+    def llm_extraction_model(self) -> str:
+        """Structured-extraction model for the active provider."""
+        if self.llm_provider == "anthropic":
+            return self.anthropic_extraction_model
+        return self.openai_extraction_model
 
     # --- TwelveLabs (video understanding) ----------------------------------
     # The SDK auto-reads TWELVE_LABS_API_KEY from the environment; this mirror

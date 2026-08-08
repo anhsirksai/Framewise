@@ -87,23 +87,35 @@ def _vendored_samples() -> list[str]:
     return sorted(str(p) for p in vids.glob("*.mp4")) if vids.is_dir() else []
 
 
-def structure_with_openai(pegasus_text: str) -> dict:
-    """Turn Pegasus prose into schema-validated video and segment data."""
-    from openai import OpenAI
+def structure_with_llm(pegasus_text: str) -> dict:
+    """Turn Pegasus prose into schema-validated video and segment data.
 
-    client = OpenAI(api_key=settings.openai_api_key or None)
-    response = client.responses.parse(
-        model=settings.openai_extraction_model,
-        reasoning={"effort": settings.openai_reasoning_effort},
-        input=[
-            {"role": "system", "content": STRUCTURE_SYSTEM},
-            {"role": "user", "content": f"Video analysis:\n\n{pegasus_text}"},
-        ],
-        text_format=VideoAnalysis,
+    Provider-generic (OpenAI or Claude, per LLM_PROVIDER in .env).
+    """
+    from app import llm_client
+
+    parsed = llm_client.parse_structured(
+        STRUCTURE_SYSTEM,
+        f"Video analysis:\n\n{pegasus_text}",
+        VideoAnalysis,
     )
-    if response.output_parsed is None:
-        raise RuntimeError("OpenAI did not return a structured video analysis.")
-    return response.output_parsed.model_dump()
+    return parsed.model_dump()
+
+    # Old direct-OpenAI implementation (now lives in app/llm_client.py):
+    # from openai import OpenAI
+    # client = OpenAI(api_key=settings.openai_api_key or None)
+    # response = client.responses.parse(
+    #     model=settings.openai_extraction_model,
+    #     reasoning={"effort": settings.openai_reasoning_effort},
+    #     input=[
+    #         {"role": "system", "content": STRUCTURE_SYSTEM},
+    #         {"role": "user", "content": f"Video analysis:\n\n{pegasus_text}"},
+    #     ],
+    #     text_format=VideoAnalysis,
+    # )
+    # if response.output_parsed is None:
+    #     raise RuntimeError("OpenAI did not return a structured video analysis.")
+    # return response.output_parsed.model_dump()
 
 
 async def apply_schema() -> None:
@@ -203,7 +215,7 @@ async def _analyze_embed_write(index_id: str, video_id: str, url: str | None,
     """Shared tail: Pegasus analyze -> OpenAI structure -> Marengo embed -> Neo4j."""
     log.info("Analyzing video_id=%s with Pegasus ...", video_id)
     pegasus_text = tl.analyze_video(video_id, PEGASUS_PROMPT)
-    structured = structure_with_openai(pegasus_text)
+    structured = structure_with_llm(pegasus_text)
     segments = structured.get("segments", [])
     log.info("Structured into %d segments. Embedding ...", len(segments))
 
@@ -231,9 +243,47 @@ async def _analyze_embed_write(index_id: str, video_id: str, url: str | None,
     return dim
 
 
-async def ingest_new(index_id: str, source: str) -> int:
-    """Ingest a NEW video from a public URL or a local file path."""
+async def _already_in_graph(video_id: str) -> bool:
+    """True when this video already has segments in Neo4j (fully ingested)."""
+    try:
+        rows = await execute_cypher(
+            "MATCH (:Video {id: $id})-[:HAS_SEGMENT]->(s:Segment) RETURN count(s) AS n",
+            {"id": video_id},
+        )
+        return bool(rows and rows[0].get("n", 0) > 0)
+    except Exception as e:
+        log.warning("Neo4j duplicate check failed for %s: %s", video_id, e)
+        return False
+
+
+async def ingest_new(index_id: str, source: str, force: bool = False) -> int:
+    """Ingest a video from a public URL or a local file path.
+
+    Deduplicates on filename: if TwelveLabs already has the file in this index
+    we reuse its video_id instead of uploading again, and if Neo4j already has
+    the video's segments we skip entirely (pass --force to re-analyze).
+    """
     is_file = not source.lower().startswith(("http://", "https://"))
+    filename = Path(source).name if is_file else source.rsplit("/", 1)[-1]
+
+    existing = tl.find_video_by_filename(index_id, filename)
+    if existing:
+        video_id = existing["video_id"]
+        log.info("'%s' already indexed in TwelveLabs (video_id=%s) — skipping upload", filename, video_id)
+        if not force and await _already_in_graph(video_id):
+            log.info("  already in Neo4j graph too — nothing to do (use --force to re-analyze)")
+            return 0
+        # Indexed in TL but missing from the graph (or --force): analyze without re-uploading.
+        url = None if is_file else source
+        duration = existing.get("duration_sec")
+        if is_file:
+            try:
+                url = tl.get_video_meta(index_id, video_id).get("url")
+            except Exception:
+                pass
+        title = filename.rsplit(".", 1)[0]
+        return await _analyze_embed_write(index_id, video_id, url, title, duration)
+
     log.info("Indexing %s: %s ...", "file" if is_file else "url", source)
     cb = lambda st: log.info("  status: %s", st)  # noqa: E731
     if is_file:
@@ -273,11 +323,12 @@ async def ingest_existing(index_id: str, video_id: str) -> int:
 async def main() -> None:
     args = sys.argv[1:]
     schema_only = "--schema-only" in args
+    force = "--force" in args  # re-analyze even if the video is already in the graph
     index_override: str | None = None
     video_ids: list[str] = []
     sources: list[str] = []
     for a in args:
-        if a == "--schema-only":
+        if a in ("--schema-only", "--force"):
             continue
         if a.startswith("--index-id="):
             index_override = a.split("=", 1)[1]
@@ -326,7 +377,7 @@ async def main() -> None:
                 log.exception("Failed to ingest existing video %s: %s", vid, e)
         for src in sources:
             try:
-                d = await ingest_new(index_id, src)
+                d = await ingest_new(index_id, src, force=force)
                 dim = dim or d
             except Exception as e:
                 log.exception("Failed to ingest %s: %s", src, e)
@@ -335,7 +386,7 @@ async def main() -> None:
             await ensure_segment_vector_index(dim)
             log.info("Vector index ready (dim=%d)", dim)
         else:
-            log.warning("No embeddings produced — vector index not created.")
+            log.info("No new embeddings produced (everything skipped or failed) — vector index left as-is.")
     finally:
         await close_neo4j()
 

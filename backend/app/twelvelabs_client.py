@@ -188,6 +188,30 @@ def ingest_video(index_id: str, *, video_url: str | None = None,
     }
 
 
+def find_video_by_filename(index_id: str, filename: str) -> dict | None:
+    """Return {video_id, duration_sec, filename} for an already-indexed video
+    with this exact filename, or None.
+
+    Used by ingestion to skip duplicate uploads when re-running seed.
+    On lookup failure we return None (fail open: worst case is a re-upload).
+    """
+    client = get_client()
+    try:
+        for v in client.indexes.videos.list(index_id, filename=filename, page_limit=1):
+            d = _dump(v)
+            sm = (d.get("system_metadata") or {}) if isinstance(d, dict) else {}
+            vid = _getattr_any(v, "id", "_id")
+            if vid:
+                return {
+                    "video_id": str(vid),
+                    "duration_sec": sm.get("duration"),
+                    "filename": sm.get("filename"),
+                }
+    except Exception as e:
+        logger.warning("Duplicate check failed for %s (will upload): %s", filename, e)
+    return None
+
+
 def get_video_meta(index_id: str, video_id: str) -> dict:
     """Fetch metadata for a video already indexed in TwelveLabs.
 

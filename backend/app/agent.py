@@ -1,4 +1,4 @@
-"""Framewise agent - Strands + OpenAI brain, video graph tools."""
+"""Framewise agent - Strands brain (OpenAI or Claude), video graph tools."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import json
 import os
 
 from strands import Agent
-from strands.models.openai_responses import OpenAIResponsesModel
 from strands.tools import tool
 
 from app.config import settings
@@ -15,9 +14,13 @@ from app.context_graph_client import execute_cypher, get_schema
 from app.memory import store_message, get_context, resolve_session_id
 from app.vector_client import segment_vector_search
 
-# Ensure OPENAI_API_KEY is on the environment for the OpenAI client.
-if not os.environ.get("OPENAI_API_KEY") and settings.openai_api_key:
-    os.environ["OPENAI_API_KEY"] = settings.openai_api_key
+# Ensure the active provider's API key is on the environment for its client.
+if settings.llm_provider == "anthropic":
+    if not os.environ.get("ANTHROPIC_API_KEY") and settings.anthropic_api_key:
+        os.environ["ANTHROPIC_API_KEY"] = settings.anthropic_api_key
+else:
+    if not os.environ.get("OPENAI_API_KEY") and settings.openai_api_key:
+        os.environ["OPENAI_API_KEY"] = settings.openai_api_key
 
 
 _main_loop: asyncio.AbstractEventLoop | None = None
@@ -145,14 +148,26 @@ def get_graph_schema() -> str:
     return json.dumps(result, default=str)
 
 
-model = OpenAIResponsesModel(
-    client_args={"api_key": os.environ.get("OPENAI_API_KEY", settings.openai_api_key)},
-    model_id=settings.openai_model,
-    params={
-        "reasoning": {"effort": settings.openai_reasoning_effort},
-        "max_output_tokens": 2000,
-    },
-)
+# Build the Strands model for the active provider (LLM_PROVIDER in .env).
+if settings.llm_provider == "anthropic":
+    from strands.models.anthropic import AnthropicModel
+
+    model = AnthropicModel(
+        client_args={"api_key": os.environ.get("ANTHROPIC_API_KEY", settings.anthropic_api_key)},
+        model_id=settings.anthropic_model,
+        max_tokens=2000,
+    )
+else:
+    from strands.models.openai_responses import OpenAIResponsesModel
+
+    model = OpenAIResponsesModel(
+        client_args={"api_key": os.environ.get("OPENAI_API_KEY", settings.openai_api_key)},
+        model_id=settings.openai_model,
+        params={
+            "reasoning": {"effort": settings.openai_reasoning_effort},
+            "max_output_tokens": 2000,
+        },
+    )
 
 agent = Agent(
     model=model,

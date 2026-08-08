@@ -356,51 +356,50 @@ def _fallback_plan(
     }
 
 
-def _openai_rough_cut_plan(
+def _llm_rough_cut_plan(
     prompt: str,
     theme: str,
     context: list[dict],
     clips: list[dict],
     target_duration_sec: int,
 ) -> dict:
-    from openai import OpenAI
+    # Provider-generic client (OpenAI or Claude, per LLM_PROVIDER in .env).
+    from app import llm_client
 
-    if not settings.openai_api_key:
+    if not llm_client.llm_configured():
         return _fallback_plan(prompt, theme, context, clips, target_duration_sec)
 
-    client = OpenAI(api_key=settings.openai_api_key)
-    response = client.responses.create(
-        model=settings.openai_model,
-        reasoning={"effort": settings.openai_reasoning_effort},
-        max_output_tokens=1200,
-        text={"format": {"type": "json_object"}},
-        input=[
-            {
-                "role": "system",
-                "content": (
-                    "You create Rodeo-style rough cut plans from indexed source videos. "
-                    "Use only the provided source videos and clip candidates. Return JSON with "
-                    "title, prompt, target_duration_sec, storyline, theme_dna array, scenes array, "
-                    "do_rules array, and dont_rules array. Each scene must include order, title, "
-                    "purpose, source_video, video_id, start_sec, end_sec, voiceover, on_screen_text."
-                ),
-            },
-            {
-                "role": "user",
-                "content": json.dumps({
-                    "prompt": prompt,
-                    "theme": theme,
-                    "source_videos": context,
-                    "clip_candidates": clips,
-                    "target_duration_sec": target_duration_sec,
-                }, default=str),
-            },
-        ],
+    system = (
+        "You create Rodeo-style rough cut plans from indexed source videos. "
+        "Use only the provided source videos and clip candidates. Return JSON with "
+        "title, prompt, target_duration_sec, storyline, theme_dna array, scenes array, "
+        "do_rules array, and dont_rules array. Each scene must include order, title, "
+        "purpose, source_video, video_id, start_sec, end_sec, voiceover, on_screen_text."
     )
+    user_content = json.dumps({
+        "prompt": prompt,
+        "theme": theme,
+        "source_videos": context,
+        "clip_candidates": clips,
+        "target_duration_sec": target_duration_sec,
+    }, default=str)
     try:
-        return json.loads(getattr(response, "output_text", "") or "{}")
+        return llm_client.generate_json(system, user_content, max_output_tokens=1200)
     except json.JSONDecodeError:
         return _fallback_plan(prompt, theme, context, clips, target_duration_sec)
+
+    # Old direct-OpenAI implementation (now lives in app/llm_client.py):
+    # from openai import OpenAI
+    # client = OpenAI(api_key=settings.openai_api_key)
+    # response = client.responses.create(
+    #     model=settings.openai_model,
+    #     reasoning={"effort": settings.openai_reasoning_effort},
+    #     max_output_tokens=1200,
+    #     text={"format": {"type": "json_object"}},
+    #     input=[{"role": "system", "content": system},
+    #            {"role": "user", "content": user_content}],
+    # )
+    # return json.loads(getattr(response, "output_text", "") or "{}")
 
 
 @router.get("/generation/themes")
@@ -439,7 +438,7 @@ async def generate_brief(request: GenerateBriefRequest):
     theme_key = _theme_key(theme_name)
     clips = await _clip_candidates(request.prompt)
     rough_cut = await asyncio.to_thread(
-        _openai_rough_cut_plan,
+        _llm_rough_cut_plan,
         request.prompt,
         theme_name,
         context,
