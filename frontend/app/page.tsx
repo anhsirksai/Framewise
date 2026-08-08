@@ -18,12 +18,7 @@ export default function LandingPage() {
             Framewise
           </Link>
           <div className={styles.navActions}>
-            <a
-              href="https://framewise-ten.vercel.app/"
-              className={styles.btnGhost}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href="#demo" className={styles.btnGhost}>
               Demo
             </a>
             <Link href="/app" className={styles.btnPrimary}>
