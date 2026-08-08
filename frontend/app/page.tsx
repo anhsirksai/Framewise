@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Box, Flex, Heading, Text, IconButton, HStack, Spinner } from "@chakra-ui/react";
-import { MessageSquare, Network, FileText } from "lucide-react";
+import { Box, Flex, Heading, Text, IconButton, HStack, Spinner, VStack } from "@chakra-ui/react";
+import { MessageSquare, Network, FileText, Compass, CloudUpload } from "lucide-react";
 import dynamic from "next/dynamic";
 import { ChatInterface } from "@/components/ChatInterface";
+import { IngestView } from "@/components/IngestView";
 const ContextGraphView = dynamic(
   () => import("@/components/ContextGraphView").then((mod) => mod.ContextGraphView),
   {
@@ -23,6 +24,37 @@ import { DOMAIN, API_BASE } from "@/lib/config";
 import type { GraphData } from "@/lib/config";
 
 type PanelId = "chat" | "graph" | "details";
+type ViewId = "explore" | "ingest";
+
+function SidebarButton({
+  label,
+  active,
+  onClick,
+  children,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <VStack gap={0.5}>
+      <IconButton
+        aria-label={label}
+        variant={active ? "solid" : "ghost"}
+        colorPalette={active ? "blue" : "gray"}
+        color={active ? "white" : "gray.400"}
+        size="sm"
+        onClick={onClick}
+      >
+        {children}
+      </IconButton>
+      <Text fontSize="2xs" color={active ? "blue.300" : "gray.500"}>
+        {label}
+      </Text>
+    </VStack>
+  );
+}
 
 function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
   const handleMouseDown = useCallback(
@@ -63,6 +95,7 @@ function ResizeHandle({ onDrag }: { onDrag: (delta: number) => void }) {
 export default function Home() {
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [activePanel, setActivePanel] = useState<PanelId>("chat");
+  const [activeView, setActiveView] = useState<ViewId>("explore");
   const [backendStatus, setBackendStatus] = useState<"ok" | "degraded" | "offline">("offline");
   const [leftWidth, setLeftWidth] = useState(400);
   const [rightWidth, setRightWidth] = useState(350);
@@ -162,8 +195,35 @@ export default function Home() {
         </HStack>
       </Flex>
 
-      {/* Main content - 3 panel layout */}
-      <Flex as="main" flex={1} overflow="hidden">
+      {/* Body: left sidebar + active view */}
+      <Flex flex={1} overflow="hidden">
+        {/* Sidebar navigation */}
+        <VStack
+          as="nav"
+          aria-label="Main navigation"
+          bg="gray.900"
+          px={2}
+          py={4}
+          gap={4}
+          flexShrink={0}
+          borderRight="1px solid"
+          borderColor="gray.700"
+        >
+          <SidebarButton label="Explore" active={activeView === "explore"} onClick={() => setActiveView("explore")}>
+            <Compass size={18} />
+          </SidebarButton>
+          <SidebarButton label="Ingest" active={activeView === "ingest"} onClick={() => setActiveView("ingest")}>
+            <CloudUpload size={18} />
+          </SidebarButton>
+        </VStack>
+
+        {/* Ingest view */}
+        <Box flex={1} overflow="hidden" display={activeView === "ingest" ? "block" : "none"}>
+          <IngestView />
+        </Box>
+
+        {/* Explore view - 3 panel layout (kept mounted to preserve chat/graph state) */}
+      <Flex as="main" flex={1} overflow="hidden" display={activeView === "explore" ? "flex" : "none"}>
         {/* Left panel: Chat */}
         <Box
           as="section"
@@ -221,6 +281,7 @@ export default function Home() {
             </Box>
           </Flex>
         </Box>
+      </Flex>
       </Flex>
 
       {/* Mobile bottom tab bar — hidden on desktop */}

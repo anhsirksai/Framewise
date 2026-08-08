@@ -7,7 +7,7 @@ import json
 import re
 import uuid as _uuid
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 from starlette.responses import StreamingResponse
 
@@ -218,6 +218,67 @@ async def video_segments(video_id: str):
         collect=False,
     )
     return {"video_id": video_id, "segments": results}
+
+
+# ---------------------------------------------------------------------------
+# Ingestion — upload a video from the browser; pipeline runs as a background job
+# ---------------------------------------------------------------------------
+
+_ALLOWED_VIDEO_EXT = {".mp4", ".mov", ".webm", ".mkv", ".avi"}
+_MAX_UPLOAD_BYTES = 2 * 1024 * 1024 * 1024  # TwelveLabs limit is 2GB per video
+
+
+@router.post("/ingest/upload")
+async def ingest_upload(file: UploadFile = File(...)):
+    """Accept a video upload and ingest it (TwelveLabs -> LLM -> Neo4j) in the background."""
+    import os
+    import shutil
+    import tempfile
+
+    from app import ingestion
+
+    _require_neo4j()
+    filename = os.path.basename(file.filename or "upload.mp4")
+    ext = os.path.splitext(filename)[1].lower()
+    if ext not in _ALLOWED_VIDEO_EXT:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type '{ext}'. "
+                            f"Allowed: {', '.join(sorted(_ALLOWED_VIDEO_EXT))}")
+
+    # Keep the original filename inside a temp dir — dedupe matches on it.
+    tmp_dir = tempfile.mkdtemp(prefix="framewise_upload_")
+    tmp_path = os.path.join(tmp_dir, filename)
+    size = 0
+    with open(tmp_path, "wb") as out:
+        while chunk := await file.read(1024 * 1024):
+            size += len(chunk)
+            if size > _MAX_UPLOAD_BYTES:
+                out.close()
+                shutil.rmtree(tmp_dir, ignore_errors=True)
+                raise HTTPException(status_code=413, detail="File exceeds the 2GB limit.")
+            out.write(chunk)
+
+    job = ingestion.start_upload_job(tmp_path, filename)
+    return {"job": job}
+
+
+@router.get("/ingest/jobs")
+async def ingest_jobs():
+    """List recent ingestion jobs, newest first."""
+    from app import ingestion
+
+    jobs = sorted(ingestion.JOBS.values(), key=lambda j: j["created_at"], reverse=True)
+    return {"jobs": jobs}
+
+
+@router.get("/ingest/jobs/{job_id}")
+async def ingest_job(job_id: str):
+    """Get one ingestion job's status."""
+    from app import ingestion
+
+    job = ingestion.JOBS.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Unknown job id")
+    return {"job": job}
 
 
 @router.post("/search")
