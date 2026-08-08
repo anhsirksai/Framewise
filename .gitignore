@@ -9,6 +9,10 @@ venv/
 .env
 .env.local
 
+# Credential files (Aura downloads, scratch notes with keys)
+Neo4j-*.txt
+anthropic.txt
+
 # Build
 .next/
 dist/

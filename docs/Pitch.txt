@@ -1,0 +1,64 @@
+---
+Part 1 — The pitch (walks your 9 slides, ~3 minutes)
+
+[Slide 1 — Title]
+
+▎ "Hi, we're Framewise. Everything valuable you've ever recorded — videos, security footage, medical bills — is trapped in files nobody can search. We built a platform that turns all of it into a permanent, queryable memory. Every claim it makes is traceable back to the exact source and timestamp."
+
+[Slide 2 — Problem]
+
+▎ "Video is the richest data we produce and the least usable. A marketing team can't ask 'what made our last campaign work?' A security team can't connect one thief across five cameras. And you can't find the receipt that would save you money at tax time. Keyword search doesn't fix this — the answers live in relationships: who appeared where, when, connected to what."
+
+[Slide 3 — HSA Receipt Recall] (the hook — slow down here)
+
+▎ "Here's the sharpest example. HSA reimbursements have no deadline — the IRS lets you claim a medical expense you paid twenty years ago, tax-free, as long as you have the bill. Almost nobody does, so billions in tax savings are simply abandoned. With Framewise, every bill you ever capture is understood and stored forever. Twenty years later you just ask: 'Fetch the bill for my knee MRI from 2005' — and the exact document comes back. That's the product in one sentence: a memory that outlives your filing cabinet."
+
+[Slide 4 — Layers]
+
+▎ "That's one product on a three-layer foundation. Layer one: understand any media — who, what, where, when. Layer two: act on it — generate content, answer questions, retrieve documents. Layer three: reuse the same graph for entirely new verticals. Every video we ingest makes the platform smarter."
+
+[Slides 5–6 — Marketing & Security]
+
+▎ "Two more verticals prove that. The Marketing Studio learns a company's 'style DNA' from past videos and drafts new campaigns in that voice — with every scene citing its source. Security Vigilance stitches clips from many cameras into one incident timeline and finds repeating patterns across cases."
+
+[Slides 7–8 — Architecture]
+
+▎ "Under the hood, two paths share one evidence graph. The batch path: TwelveLabs watches and indexes the media, Claude structures it into entities, topics, and time-coded segments, and everything persists in Neo4j with provenance. The interactive path: a Strands agent, reasoning with Claude, queries that graph plus vector search and always returns evidence, not just answers. And it's built to scale — heavy analysis runs in queued workers, so chat stays fast."
+
+[Slide 9 — Close]
+
+▎ "Trust is the differentiator: every answer cites a source, a timestamp, a document. Framewise — turn every video into reusable intelligence, and never lose a receipt again."
+
+---
+
+Part 2 — Explaining Video / Segment / Entity / Topic / Person / Organization / Location
+
+Your graph (from ingest.py) has four node types — Video, Segment, Entity, Topic — and Person, Organization, Location are types of Entity, not separate nodes. Here's how to explain each, with a "say it like this" line:
+
+┌────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────┬──────────────────────────────────────────────────────────────────────────────────────────┐
+│        Concept         │                                What it is technically                                │                                      How to say it                                       │
+├────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Video                  │ One node per ingested file, with an ID and overall summary.                          │ "The book. One node per video — the container everything else hangs off."                │
+├────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Segment                │ A time slice of a video (start_sec–end_sec) with its own summary, transcript,        │ "The pages. We cut each video into moments — every moment knows exactly when it          │
+│                        │ on-screen text, and vector embedding. Chained by NEXT in time order.                 │ happened, so every answer comes with a timestamp."                                       │
+├────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Entity                 │ A real-world thing mentioned in a segment. Merged by canonical name, so the same     │ "The characters. If John Smith appears in Monday's video and Thursday's, that's one John │
+│                        │ thing in two different videos is one node.                                           │  Smith node connected to both — that's how we link events across videos."                │
+├────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Topic                  │ What a segment is about — a theme rather than a thing (e.g. "Product Launch",        │ "The themes. Entities are nouns you could photograph; topics are what the moment is      │
+│                        │ "Insurance Claim").                                                                  │ about."                                                                                  │
+├────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────┼──────────────────────────────────────────────────────────────────────────────────────────┤
+│ Person / Organization  │ Values of Entity.type (alongside object, product, brand, event, concept), extracted  │ "Flavors of entity. Tagging the type lets us ask typed questions: 'which people appeared │
+│ / Location             │ by Claude during ingestion.                                                          │  at this location?' instead of just string matching."                                    │
+└────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────┴──────────────────────────────────────────────────────────────────────────────────────────┘
+
+The relationships, in one breath:
+
+▎ A Video HAS_SEGMENT Segments; each Segment MENTIONS Entities and is ABOUT Topics; segments link to the next in time.
+
+And the best way to make it land is one traversal example — use the HSA story:
+
+▎ "When you ask 'find my knee MRI bill from 2005', we don't grep filenames. We find the Entity 'MRI' (type: object) and 'knee', walk to the Segments that mention them, filter by the segment's date, and follow HAS_SEGMENT back up to the source Video — er, document. What comes back is the exact bill plus the path we took to find it. That path is the evidence. That's why the graph beats plain search."
+
+One anticipated judge question: "Why a graph instead of just vector search?" — Answer: vector search finds similar moments; the graph answers relationship questions ("same person, different cameras, same week") and gives you an auditable evidence trail. You use both — vectors to land in the right neighborhood, the graph to connect and prove.

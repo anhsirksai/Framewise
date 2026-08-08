@@ -4,6 +4,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Box, Flex, Heading, Text, IconButton, HStack, Spinner, VStack } from "@chakra-ui/react";
 import { MessageSquare, Network, FileText, Compass, CloudUpload } from "lucide-react";
 import dynamic from "next/dynamic";
+import NextLink from "next/link";
 import { ChatInterface } from "@/components/ChatInterface";
 import { IngestView } from "@/components/IngestView";
 const ContextGraphView = dynamic(
@@ -157,13 +158,20 @@ export default function Home() {
     <Flex direction="column" h="100dvh">
       {/* Header */}
       <Flex bg="gray.900" color="white" px={6} py={3} justify="space-between" align="center">
-        <Box>
-          <Heading size="md">
+        <Box
+          asChild
+          cursor="pointer"
+          _hover={{ opacity: 0.8 }}
+          transition="opacity 0.15s"
+        >
+          <NextLink href="/landing" title="Go to home page" aria-label="Go to home page">
+            <Heading size="md">
 🎬 {DOMAIN.name}
-          </Heading>
-          <Text fontSize="sm" color="gray.400">
-            {DOMAIN.tagline}
-          </Text>
+            </Heading>
+            <Text fontSize="sm" color="gray.400">
+              {DOMAIN.tagline}
+            </Text>
+          </NextLink>
         </Box>
         <HStack gap={2}>
           <Box

@@ -133,7 +133,7 @@
       <p class="title-vision">From unstructured video to operational intelligence.</p>
       <p class="subtitle">A scalable foundation for understanding video, creating company-specific marketing content, and discovering patterns across security incidents.</p>
       <div class="rule"></div>
-      <div class="meta"><span class="pill">TwelveLabs</span><span class="pill">OpenAI</span><span class="pill">Strands</span><span class="pill">Neo4j / AuraDB</span></div>
+      <div class="meta"><span class="pill">TwelveLabs</span><span class="pill">Claude</span><span class="pill">Strands</span><span class="pill">Neo4j / AuraDB</span></div>
       <div class="footer"><span>Product and architecture overview</span><span>01 / 08</span></div>
     </section>
 
@@ -149,18 +149,40 @@
           <div class="point"><strong>Generative answers need trust.</strong><span>Every recommendation should be traceable to a source video and timestamp.</span></div>
         </div>
       </div>
-      <div class="footer"><span>Problem statement</span><span>02 / 08</span></div>
+      <div class="footer"><span>Problem statement</span><span>02 / 09</span></div>
+    </section>
+
+    <section class="slide" data-title="HSA Receipt Recall">
+      <div class="kicker">03 — The product</div>
+      <h2>HSA Receipt Recall: find any bill, even one from 20 years ago.</h2>
+      <div class="two-col">
+        <div>
+          <div class="quote">HSA reimbursements have no deadline — but the receipt that proves your claim is unfindable two decades later.</div>
+          <div class="pipeline" style="margin-top: 28px; grid-template-columns: 1fr 1fr 1fr 1fr 1fr;">
+            <div class="box"><strong>Capture</strong><small>bills, receipts, EOBs</small></div><div class="arrow">──►</div>
+            <div class="box"><strong>Understand</strong><small>index + embed</small></div><div class="arrow">──►</div>
+            <div class="box"><strong>Retrieve</strong><small>natural-language search</small></div>
+          </div>
+        </div>
+        <div class="points">
+          <div class="point"><strong>The problem.</strong><span>You can claim an HSA expense years — even decades — after you paid it, tax-free. Almost no one keeps a searchable record that long, so the money is left on the table.</span></div>
+          <div class="point"><strong>The product.</strong><span>Every medical bill and receipt is ingested, understood, and stored in the same evidence graph. Ask “find my dental bill from 2006” and get the exact document back.</span></div>
+          <div class="point"><strong>Why it works here.</strong><span>The same pipeline that makes video searchable — index, embed, persist with provenance — makes a 20-year-old receipt retrievable in one query.</span></div>
+          <div class="point"><strong>Demo question.</strong><span>“Fetch the bill for my knee MRI from 2005 so I can claim it against my HSA.”</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Product: HSA receipt retrieval</span><span>03 / 09</span></div>
     </section>
 
     <section class="slide" data-title="Core architecture">
-      <div class="kicker">06 — Core architecture</div>
+      <div class="kicker">07 — Core architecture</div>
       <h2>Two paths. One evidence graph.</h2>
       <div class="ascii-wrap">
         <pre>┌────────────────────────────────────────────────────────────────────────────┐
 │                              INGESTION PIPELINE                             │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
-│  Video ──► TwelveLabs ──► OpenAI ──► TwelveLabs ──► Neo4j / AuraDB         │
+│  Video ──► TwelveLabs ──► Claude ──► TwelveLabs ──► Neo4j / AuraDB         │
 │           (index +        (structure)   (embed)      (persist)             │
 │            analyze)                                                        │
 │                                                                            │
@@ -170,7 +192,7 @@
 │                                CHAT RUNTIME                                │
 ├────────────────────────────────────────────────────────────────────────────┤
 │                                                                            │
-│  User ──► FastAPI ──► Strands ──► OpenAI (reasoning)                       │
+│  User ──► FastAPI ──► Strands ──► Claude (reasoning)                       │
 │                          │                                                 │
 │                          ├──► TwelveLabs (embed / search)                  │
 │                          ├──► Neo4j (graph + vector search)                │
@@ -183,7 +205,7 @@
     </section>
 
     <section class="slide" data-title="Scalable target architecture">
-      <div class="kicker">07 — Scalable target architecture</div>
+      <div class="kicker">08 — Scalable target architecture</div>
       <h2>Separate the interactive path from the heavy lifting.</h2>
       <div class="ascii-wrap">
         <pre>                           ┌──────────────────┐
@@ -230,7 +252,7 @@
     </section>
 
     <section class="slide" data-title="Product layers">
-      <div class="kicker">03 — The bigger problem</div>
+      <div class="kicker">04 — The bigger problem</div>
       <h2>Three product layers. One compounding foundation.</h2>
       <div class="layers">
         <div class="layer"><div class="layer-number">1</div><div><h3>Understand video</h3><p>Analyze segments, people, objects, actions, speech, text, style, topics, and relationships.</p></div><div class="layer-outcome"><strong>Foundation:</strong> searchable, time-coded video intelligence.</div></div>
@@ -241,7 +263,7 @@
     </section>
 
     <section class="slide" data-title="Marketing studio">
-      <div class="kicker">04 — Product one</div>
+      <div class="kicker">05 — Product two</div>
       <h2>Marketing Video Studio: create in the company’s own language.</h2>
       <div class="pipeline">
         <div class="box"><strong>Past videos</strong><small>approved examples</small></div><div class="arrow">──►</div>
@@ -261,7 +283,7 @@
     </section>
 
     <section class="slide" data-title="Security vigilance">
-      <div class="kicker">05 — Product two</div>
+      <div class="kicker">06 — Product three</div>
       <h2>Security Vigilance: turn many clips into one incident story.</h2>
       <div class="two-col" style="margin-top: 32px;">
         <div class="ascii-wrap" style="margin-top: 0;">
@@ -288,7 +310,7 @@ Camera C ──┘          │
     </section>
 
     <section class="slide" data-title="Scale and close">
-      <div class="kicker">08 — Scale-ready design</div>
+      <div class="kicker">09 — Scale-ready design</div>
       <h2>Scale the workload, not the request timeout.</h2>
       <table class="scale-table">
         <thead><tr><th>Concern</th><th>Design choice</th><th>What to demonstrate</th></tr></thead>
@@ -317,9 +339,9 @@ Camera C ──┘          │
       const deck = document.querySelector('.deck');
       const originalSlides = [...deck.querySelectorAll('.slide')];
 
-      // Presentation order: problem, product layers, marketing, security,
-      // core architecture, scalable architecture, and scale close.
-      const presentationOrder = [0, 1, 4, 5, 6, 2, 3, 7];
+      // Presentation order: problem, HSA product, product layers, marketing,
+      // security, core architecture, scalable architecture, and scale close.
+      const presentationOrder = [0, 1, 2, 5, 6, 7, 3, 4, 8];
       presentationOrder.forEach(index => deck.appendChild(originalSlides[index]));
 
       const slides = [...deck.querySelectorAll('.slide')];

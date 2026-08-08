@@ -14,6 +14,7 @@ import {
 } from "@chakra-ui/react";
 import { CheckCircle2, CircleAlert, CloudUpload, FileVideo, SkipForward } from "lucide-react";
 import { API_BASE } from "@/lib/config";
+import { friendlyError } from "@/lib/errors";
 
 interface IngestJob {
   id: string;
@@ -31,6 +32,7 @@ interface IngestJob {
 const STAGE_LABELS: Record<string, string> = {
   queued: "Queued",
   checking: "Checking for duplicates",
+  transcoding: "Downscaling to 2160p",
   indexing: "Indexing with TwelveLabs",
   analyzing: "Analyzing (Pegasus)",
   structuring: "Extracting segments (LLM)",
@@ -40,7 +42,7 @@ const STAGE_LABELS: Record<string, string> = {
   error: "Error",
 };
 
-const STAGE_ORDER = ["checking", "indexing", "analyzing", "structuring", "embedding", "writing"];
+const STAGE_ORDER = ["checking", "transcoding", "indexing", "analyzing", "structuring", "embedding", "writing"];
 
 function StatusBadge({ job }: { job: IngestJob }) {
   if (job.status === "running") {
@@ -137,7 +139,7 @@ export function IngestView({ onIngested }: { onIngested?: () => void }) {
         }
         await refreshJobs();
       } catch (e) {
-        setError(e instanceof Error ? e.message : "Upload failed.");
+        setError(e instanceof Error ? friendlyError(e.message) : "Upload failed.");
       } finally {
         setUploading(false);
       }
@@ -233,7 +235,7 @@ export function IngestView({ onIngested }: { onIngested?: () => void }) {
                 </Flex>
                 <StageProgress job={job} />
                 <Text mt={2} fontSize="xs" color={job.status === "failed" ? "red.500" : "gray.500"}>
-                  {job.status === "failed" ? job.error : job.detail}
+                  {job.status === "failed" ? friendlyError(job.error) : job.detail}
                 </Text>
               </Box>
             ))}

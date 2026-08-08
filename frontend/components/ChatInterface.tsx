@@ -10,6 +10,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { API_BASE, DEMO_SCENARIOS, DOMAIN } from "@/lib/config";
 import type { GraphData } from "@/lib/config";
+import { friendlyError } from "@/lib/errors";
 
 interface ToolCall {
   name: string;
@@ -416,13 +417,20 @@ export function ChatInterface({ onGraphUpdate, externalInput, onExternalInputCon
       if (err instanceof DOMException && err.name === "AbortError") {
         errorMsg = "Request timed out or was cancelled. Please try again.";
       } else if (err instanceof Error && err.message) {
-        errorMsg = err.message;
+        errorMsg = friendlyError(err.message);
       } else {
         errorMsg = "Cannot reach the backend. Is it running?";
       }
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: "assistant", content: `**Error:** ${errorMsg}`, retryInput: messageText },
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: errorMsg.startsWith("Sorry, out of credits!")
+            ? `**Sorry, out of credits!** ${errorMsg.slice("Sorry, out of credits!".length).trim()}`
+            : `**Error:** ${errorMsg}`,
+          retryInput: messageText,
+        },
       ]);
       setStreamingContent("");
       setStreamingToolCalls([]);

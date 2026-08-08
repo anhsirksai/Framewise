@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Framewise — Video Intelligence Platform</title>
+  <style>
+    /* Anthropic-inspired visual language: warm ivory canvas, book-cloth coral
+       accent, serif display type, understated chrome. */
+    :root {
+      --ivory: #F0EEE6;        /* canvas */
+      --paper: #FAF9F5;        /* slide surface */
+      --ink: #191919;          /* primary text */
+      --slate: #55534E;        /* secondary text */
+      --faded: #87857e;        /* tertiary */
+      --clay: #CC785C;         /* book-cloth coral accent */
+      --clay-deep: #B0552F;
+      --clay-soft: #F3E3DB;
+      --line: #E3E0D6;
+      --line-strong: #D2CFC4;
+      --sky: #6A9BCC;
+      --olive: #788C5D;
+      --serif: "Tiempos Headline", "Fraunces", Georgia, "Times New Roman", serif;
+      --sans: "Styrene A", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+      --mono: "Berkeley Mono", "SFMono-Regular", Consolas, Menlo, monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: var(--ivory); color: var(--ink); font-family: var(--sans); -webkit-font-smoothing: antialiased; }
+    button { font: inherit; }
+
+    .deck { min-height: 100vh; display: grid; place-items: center; padding: 28px; }
+    .slide {
+      display: none; width: min(1180px, 100%); min-height: min(700px, calc(100vh - 110px));
+      padding: 60px 76px 52px; position: relative; overflow: hidden;
+      background: var(--paper); border: 1px solid var(--line); border-radius: 20px;
+      box-shadow: 0 18px 50px rgba(60, 50, 40, .08);
+    }
+    .slide.active { display: flex; flex-direction: column; }
+
+    .kicker { display: inline-flex; align-items: center; gap: 10px; font: 600 12px/1 var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--clay-deep); }
+    .kicker::before { content: ""; width: 26px; height: 2px; background: var(--clay); }
+
+    h1, h2, h3 { margin: 0; font-family: var(--serif); font-weight: 500; letter-spacing: -.02em; }
+    h1 { margin-top: 26px; max-width: 900px; font-size: clamp(42px, 6vw, 76px); line-height: 1.02; }
+    h2 { margin-top: 18px; max-width: 940px; font-size: clamp(30px, 4vw, 48px); line-height: 1.08; }
+    h3 { font-size: 21px; line-height: 1.2; }
+    em.accent { font-style: italic; color: var(--clay-deep); }
+    p { color: var(--slate); line-height: 1.6; }
+    .subtitle { max-width: 720px; margin: 24px 0 0; font-size: 19px; line-height: 1.55; }
+    .footer { margin-top: auto; padding-top: 26px; display: flex; justify-content: space-between; gap: 20px; color: var(--faded); font: 12px var(--sans); letter-spacing: .04em; }
+
+    /* Title slide */
+    .title-slide { justify-content: center; }
+    .title-slide .wordmark { font-family: var(--serif); font-size: 17px; color: var(--ink); letter-spacing: .01em; }
+    .brand-line { max-width: 780px; margin: 22px 0 0; font-family: var(--serif); font-style: italic; color: var(--clay-deep); font-size: clamp(22px, 3vw, 32px); line-height: 1.25; }
+    .meta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 40px; }
+    .pill { border: 1px solid var(--line-strong); border-radius: 999px; padding: 8px 16px; color: var(--slate); background: var(--ivory); font: 13px var(--sans); }
+    .pill.hero { background: var(--clay-soft); border-color: #E4C4B4; color: var(--clay-deep); font-weight: 600; }
+
+    /* Two-column + cards */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: start; margin-top: 40px; }
+    .quote { font-family: var(--serif); font-style: italic; font-size: 26px; line-height: 1.35; color: var(--ink); border-left: 3px solid var(--clay); padding: 6px 0 6px 24px; }
+    .points { display: grid; gap: 14px; }
+    .point { padding: 18px 20px; border: 1px solid var(--line); border-radius: 14px; background: var(--ivory); }
+    .point strong { display: block; margin-bottom: 5px; font-family: var(--serif); font-weight: 600; font-size: 16px; }
+    .point span { color: var(--slate); font-size: 14px; line-height: 1.55; }
+
+    /* Diagram panels */
+    .ascii-wrap { margin-top: 34px; padding: 26px 30px; overflow: auto; border: 1px solid var(--line-strong); border-radius: 14px; background: #FFFDF8; }
+    pre { margin: 0; color: #33312c; font: 15px/1.7 var(--mono); white-space: pre; }
+    .diagram-note { margin: 18px 0 0; font-size: 14px; color: var(--faded); }
+
+    /* Pipeline */
+    .pipeline { margin-top: 38px; display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; gap: 12px; }
+    .box { min-height: 100px; padding: 18px 14px; border: 1px solid var(--line-strong); border-radius: 14px; display: grid; place-items: center; text-align: center; background: var(--ivory); }
+    .box strong { font-family: var(--serif); font-size: 16px; }
+    .box small { display: block; margin-top: 6px; color: var(--faded); font-size: 12px; }
+    .arrow { text-align: center; font: 22px var(--serif); color: var(--clay); }
+
+    /* Layers */
+    .layers { display: grid; gap: 16px; margin-top: 34px; }
+    .layer { display: grid; grid-template-columns: 76px 1fr 1fr; gap: 22px; align-items: center; padding: 22px; border: 1px solid var(--line); border-radius: 16px; background: var(--ivory); }
+    .layer-number { width: 46px; height: 46px; display: grid; place-items: center; border-radius: 50%; background: var(--clay-soft); color: var(--clay-deep); font: 600 19px var(--serif); }
+    .layer p { margin: 4px 0 0; font-size: 14px; }
+    .layer-outcome { border-left: 1px solid var(--line-strong); padding-left: 22px; font-size: 14px; color: var(--slate); }
+    .layer-outcome strong { color: var(--clay-deep); font-family: var(--serif); }
+
+    /* Table */
+    .scale-table { width: 100%; border-collapse: collapse; margin-top: 32px; font-size: 14px; }
+    .scale-table th, .scale-table td { border-bottom: 1px solid var(--line); padding: 14px 12px; text-align: left; vertical-align: top; }
+    .scale-table th { color: var(--clay-deep); font: 600 11px var(--sans); letter-spacing: .1em; text-transform: uppercase; }
+    .scale-table td:first-child { width: 21%; font-family: var(--serif); font-weight: 600; color: var(--ink); }
+    .scale-table td { color: var(--slate); }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-top: 30px; }
+    .metric { padding: 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--ivory); }
+    .metric strong { display: block; color: var(--clay-deep); font: 600 24px var(--serif); }
+    .metric span { color: var(--faded); font-size: 12px; }
+
+    /* Closing */
+    .closing { justify-content: center; }
+    .closing .principle { margin-top: 34px; max-width: 780px; font-family: var(--serif); font-style: italic; font-size: 27px; line-height: 1.4; color: var(--ink); }
+    .closing .next { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 36px; }
+    .closing .next div { padding: 18px; border-top: 2px solid var(--clay); color: var(--slate); font-size: 14px; background: var(--ivory); border-radius: 0 0 12px 12px; }
+
+    /* Controls */
+    .controls { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--line-strong); border-radius: 999px; background: rgba(250, 249, 245, .95); box-shadow: 0 8px 24px rgba(60, 50, 40, .12); z-index: 4; }
+    .controls button { width: 34px; height: 30px; border: 1px solid var(--line); border-radius: 999px; background: var(--paper); color: var(--ink); cursor: pointer; }
+    .controls button:hover { border-color: var(--clay); color: var(--clay-deep); }
+    #counter { min-width: 54px; text-align: center; color: var(--faded); font: 12px var(--sans); }
+
+    @media (max-width: 820px) {
+      .deck { padding: 10px; }
+      .slide { min-height: calc(100vh - 76px); padding: 36px 26px 30px; border-radius: 14px; }
+      .two-col, .metrics { grid-template-columns: 1fr; gap: 18px; }
+      .pipeline { grid-template-columns: 1fr; gap: 8px; }
+      .arrow { transform: rotate(90deg); height: 22px; }
+      .layer { grid-template-columns: 56px 1fr; }
+      .layer-outcome { grid-column: 2; border-left: 0; border-top: 1px solid var(--line); padding: 14px 0 0; }
+      .closing .next { grid-template-columns: 1fr; }
+    }
+
+    @media print {
+      body { background: var(--paper); }
+      .deck { display: block; padding: 0; }
+      .slide, .slide.active { display: flex; width: 100%; min-height: 100vh; border: 0; border-radius: 0; box-shadow: none; page-break-after: always; }
+      .controls { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+
+    <!-- 01 · Title -->
+    <section class="slide title-slide active" data-title="Title">
+      <div class="wordmark">Framewise</div>
+      <h1>Every video, every receipt — <em class="accent">remembered forever.</em></h1>
+      <p class="brand-line">A video intelligence platform that turns unstructured media into evidence you can search, decades later.</p>
+      <p class="subtitle">Built on TwelveLabs for perception, Claude for reasoning, Strands for orchestration, and Neo4j for the evidence graph.</p>
+      <div class="meta">
+        <span class="pill hero">Claude</span>
+        <span class="pill">TwelveLabs</span>
+        <span class="pill">Strands</span>
+        <span class="pill">Neo4j / AuraDB</span>
+      </div>
+      <div class="footer"><span>Product and architecture overview</span><span>01 / 09</span></div>
+    </section>
+
+    <!-- 02 · Problem -->
+    <section class="slide" data-title="Problem">
+      <div class="kicker">The problem</div>
+      <h2>Rich media is full of answers. Its intelligence is <em class="accent">trapped in a timeline.</em></h2>
+      <div class="two-col">
+        <div class="quote">Organizations — and households — have more recorded evidence than anyone can watch, compare, or find again.</div>
+        <div class="points">
+          <div class="point"><strong>Creative knowledge disappears.</strong><span>Teams reinvent hooks, pacing, CTAs, and brand decisions already present in prior campaigns.</span></div>
+          <div class="point"><strong>Events are hard to connect.</strong><span>A single incident may span multiple cameras, clips, people, objects, and locations.</span></div>
+          <div class="point"><strong>Search is not enough.</strong><span>Users need relationships, timelines, patterns, and the exact evidence behind an answer.</span></div>
+          <div class="point"><strong>Generative answers need trust.</strong><span>Every recommendation should be traceable to a source document and timestamp.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Problem statement</span><span>02 / 09</span></div>
+    </section>
+
+    <!-- 03 · HSA Receipt Recall (product) -->
+    <section class="slide" data-title="HSA Receipt Recall">
+      <div class="kicker">The product</div>
+      <h2>HSA Receipt Recall: fetch a bill from <em class="accent">20 years ago</em> with one search.</h2>
+      <div class="two-col">
+        <div>
+          <div class="quote">HSA reimbursements have no deadline. The receipt that proves your claim shouldn’t have one either.</div>
+          <div class="pipeline" style="margin-top: 30px; grid-template-columns: 1fr 1fr 1fr 1fr 1fr;">
+            <div class="box"><strong>Capture</strong><small>bills, receipts, EOBs</small></div><div class="arrow">→</div>
+            <div class="box"><strong>Understand</strong><small>index + embed</small></div><div class="arrow">→</div>
+            <div class="box"><strong>Retrieve</strong><small>ask in plain language</small></div>
+          </div>
+        </div>
+        <div class="points">
+          <div class="point"><strong>The problem.</strong><span>You can reimburse an HSA expense years — even decades — after paying it, tax-free. Almost no one keeps a searchable record that long, so the tax savings are left on the table.</span></div>
+          <div class="point"><strong>The product.</strong><span>Every medical bill and receipt is ingested, understood, and persisted in the evidence graph with full provenance. Ask “find my dental bill from 2006” and get the exact document back.</span></div>
+          <div class="point"><strong>Why it works here.</strong><span>The same pipeline that makes video searchable — index, embed, persist — makes a 20-year-old receipt retrievable in a single query.</span></div>
+          <div class="point"><strong>Demo question.</strong><span>“Fetch the bill for my knee MRI from 2005 so I can claim it against my HSA.”</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Product: HSA receipt retrieval</span><span>03 / 09</span></div>
+    </section>
+
+    <!-- 04 · Product layers -->
+    <section class="slide" data-title="Product layers">
+      <div class="kicker">The bigger picture</div>
+      <h2>Three product layers. <em class="accent">One compounding foundation.</em></h2>
+      <div class="layers">
+        <div class="layer">
+          <div class="layer-number">1</div>
+          <div><h3>Understand media</h3><p>Analyze segments, people, objects, actions, speech, text, style, topics, and relationships.</p></div>
+          <div class="layer-outcome"><strong>Foundation:</strong> searchable, time-coded intelligence.</div>
+        </div>
+        <div class="layer">
+          <div class="layer-number">2</div>
+          <div><h3>Act on the intelligence</h3><p>Generate marketing briefs and templates, answer questions, retrieve decades-old receipts, and validate brand rules.</p></div>
+          <div class="layer-outcome"><strong>Workflow:</strong> turn past records into reusable decisions and claims.</div>
+        </div>
+        <div class="layer">
+          <div class="layer-number">3</div>
+          <div><h3>Discover patterns across domains</h3><p>Reuse the same graph and agent primitives for security incidents, investigations, and operational vigilance.</p></div>
+          <div class="layer-outcome"><strong>Platform:</strong> one intelligence layer, multiple vertical products.</div>
+        </div>
+      </div>
+      <div class="footer"><span>Product expansion strategy</span><span>04 / 09</span></div>
+    </section>
+
+    <!-- 05 · Marketing studio -->
+    <section class="slide" data-title="Marketing studio">
+      <div class="kicker">Vertical two</div>
+      <h2>Marketing Video Studio: create in the <em class="accent">company’s own language.</em></h2>
+      <div class="pipeline">
+        <div class="box"><strong>Past videos</strong><small>approved examples</small></div><div class="arrow">→</div>
+        <div class="box"><strong>Style DNA</strong><small>hooks, pacing, tone, CTA</small></div><div class="arrow">→</div>
+        <div class="box"><strong>Template</strong><small>scene structure + rules</small></div>
+      </div>
+      <div class="pipeline" style="margin-top: 18px;">
+        <div class="box"><strong>Brief</strong><small>campaign goal</small></div><div class="arrow">→</div>
+        <div class="box"><strong>Storyboard</strong><small>scene-by-scene plan</small></div><div class="arrow">→</div>
+        <div class="box"><strong>Compliance</strong><small>rules + evidence</small></div>
+      </div>
+      <div class="two-col" style="margin-top: 32px;">
+        <div class="point"><strong>Demo question</strong><span>“Create a 30-second launch video in Company A’s style.”</span></div>
+        <div class="point"><strong>Trust layer</strong><span>Every generated scene cites the source segments that influenced it and flags unsupported claims before approval.</span></div>
+      </div>
+      <div class="footer"><span>Vertical two: creative production and brand governance</span><span>05 / 09</span></div>
+    </section>
+
+    <!-- 06 · Security vigilance -->
+    <section class="slide" data-title="Security vigilance">
+      <div class="kicker">Vertical three</div>
+      <h2>Security Vigilance: turn many clips into <em class="accent">one incident story.</em></h2>
+      <div class="two-col" style="margin-top: 34px;">
+        <div class="ascii-wrap" style="margin-top: 0;">
+          <pre>Camera A ──┐
+Camera B ──┼──► Incident timeline
+Camera C ──┘          │
+                      ▼
+             ┌────────────────┐
+             │ Person / object│
+             │ Action / place │
+             │ Time sequence  │
+             └───────┬────────┘
+                     ▼
+                Similar cases
+                and patterns</pre>
+        </div>
+        <div class="points">
+          <div class="point"><strong>Cross-video reconstruction</strong><span>Connect multiple clips from one theft into a single time-ordered event.</span></div>
+          <div class="point"><strong>Pattern discovery</strong><span>Find recurring combinations: distraction, vehicle exit, location, time of day, and sequence of actions.</span></div>
+          <div class="point"><strong>Analyst evidence</strong><span>Return the linked clips and exact time windows so a human can verify the conclusion.</span></div>
+        </div>
+      </div>
+      <div class="footer"><span>Vertical three: security investigations and vigilance</span><span>06 / 09</span></div>
+    </section>
+
+    <!-- 07 · Core architecture -->
+    <section class="slide" data-title="Core architecture">
+      <div class="kicker">Core architecture</div>
+      <h2>Two paths. <em class="accent">One evidence graph.</em></h2>
+      <div class="ascii-wrap">
+        <pre>┌────────────────────────────────────────────────────────────────────────────┐
+│                              INGESTION PIPELINE                             │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  Media ──► TwelveLabs ──► Claude ──► TwelveLabs ──► Neo4j / AuraDB         │
+│           (index +        (structure)   (embed)      (persist)             │
+│            analyze)                                                        │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘
+
+┌────────────────────────────────────────────────────────────────────────────┐
+│                                CHAT RUNTIME                                │
+├────────────────────────────────────────────────────────────────────────────┤
+│                                                                            │
+│  User ──► FastAPI ──► Strands ──► Claude (reasoning)                       │
+│                          │                                                 │
+│                          ├──► TwelveLabs (embed / search)                  │
+│                          ├──► Neo4j (graph + vector search)                │
+│                          └──► Frontend graph visualization (NVL)           │
+│                                                                            │
+└────────────────────────────────────────────────────────────────────────────┘</pre>
+      </div>
+      <p class="diagram-note">The batch path builds durable intelligence. The interactive path retrieves evidence and orchestrates tools. Both preserve source timestamps and provenance.</p>
+      <div class="footer"><span>Reference architecture</span><span>07 / 09</span></div>
+    </section>
+
+    <!-- 08 · Scalable architecture -->
+    <section class="slide" data-title="Scalable target architecture">
+      <div class="kicker">Scalable target architecture</div>
+      <h2>Separate the interactive path from <em class="accent">the heavy lifting.</em></h2>
+      <div class="ascii-wrap">
+        <pre>                           ┌──────────────────┐
+                           │ Web / API Clients │
+                           └────────┬─────────┘
+                                    │
+                           ┌────────▼─────────┐
+                           │ API Gateway      │
+                           │ Auth / Rate Limit│
+                           └────────┬─────────┘
+                                    │
+                  ┌─────────────────┼─────────────────┐
+                  │                 │                 │
+          ┌───────▼───────┐ ┌──────▼──────┐ ┌────────▼────────┐
+          │ Chat Service  │ │ Video API  │ │ Review Service  │
+          └───────┬───────┘ └──────┬──────┘ └────────┬────────┘
+                  │                │                 │
+                  │         ┌──────▼──────┐          │
+                  │         │ Job Queue   │          │
+                  │         └──────┬──────┘          │
+                  │                │                 │
+                  │        ┌───────▼────────┐        │
+                  │        │ Ingestion      │        │
+                  │        │ Worker Pool    │        │
+                  │        └───────┬────────┘        │
+                  │                │                 │
+          ┌───────▼────────┐ ┌────▼────────────┐ ┌───▼───────────┐
+          │ Strands Agent  │ │ Video Analysis │ │ Generation    │
+          │ Orchestrator  │ │ Workers        │ │ Workers       │
+          └───────┬────────┘ └────┬───────────┘ └────┬───────────┘
+                  │               │                 │
+                  └───────────────┼─────────────────┘
+                                  │
+                ┌─────────────────▼─────────────────┐
+                │ Retrieval and Knowledge Layer     │
+                │ Neo4j AuraDB + vector indexes     │
+                │ PostgreSQL metadata               │
+                │ Redis cache/session state         │
+                │ Object storage for media/artifacts│
+                └───────────────────────────────────┘</pre>
+      </div>
+      <p class="diagram-note">Interactive requests stay bounded and responsive. Analysis, generation, and retries scale independently through workers and durable jobs.</p>
+      <div class="footer"><span>Production deployment model</span><span>08 / 09</span></div>
+    </section>
+
+    <!-- 09 · Scale and close -->
+    <section class="slide" data-title="Scale and close">
+      <div class="kicker">Scale-ready design</div>
+      <h2>Scale the workload, <em class="accent">not the request timeout.</em></h2>
+      <table class="scale-table">
+        <thead><tr><th>Concern</th><th>Design choice</th><th>What to demonstrate</th></tr></thead>
+        <tbody>
+          <tr><td>Long-running jobs</td><td>Queue-based state machine: upload → index → analyze → structure → embed → persist.</td><td>Retries, checkpoints, resumability</td></tr>
+          <tr><td>Tenant isolation</td><td>Organization/workspace scope enforced in the repository and every graph query.</td><td>Secure multi-tenant retrieval</td></tr>
+          <tr><td>Model evolution</td><td>Persist model, prompt, schema, confidence, and source metadata with every fact.</td><td>Reprocessing without losing lineage</td></tr>
+          <tr><td>Interactive latency</td><td>Bounded Strands tools, hybrid retrieval, caching, and read-optimized graph projections.</td><td>p50/p95 latency and cost</td></tr>
+          <tr><td>Trust and operations</td><td>Evidence citations, audit events, traces, quotas, dead-letter queues, and human review.</td><td>Failure-mode walkthrough</td></tr>
+        </tbody>
+      </table>
+      <div class="metrics">
+        <div class="metric"><strong>p95</strong><span>answer latency</span></div>
+        <div class="metric"><strong>precision@k</strong><span>retrieval quality</span></div>
+        <div class="metric"><strong>$/asset</strong><span>unit economics</span></div>
+        <div class="metric"><strong>evidence %</strong><span>grounded answers</span></div>
+      </div>
+      <div class="footer"><span>Production path and engineering proof</span><span>09 / 09</span></div>
+    </section>
+  </main>
+
+  <div class="controls" aria-label="Slide controls">
+    <button id="prev" aria-label="Previous slide">←</button>
+    <span id="counter">1 / 9</span>
+    <button id="next" aria-label="Next slide">→</button>
+    <button id="print" aria-label="Print presentation">⎙</button>
+  </div>
+
+  <script>
+    (() => {
+      const slides = [...document.querySelectorAll('.slide')];
+      const counter = document.querySelector('#counter');
+      counter.textContent = `1 / ${slides.length}`;
+      let current = 0;
+
+      function show(index) {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((slide, i) => slide.classList.toggle('active', i === current));
+        counter.textContent = `${current + 1} / ${slides.length}`;
+        document.title = `${slides[current].dataset.title} — Framewise`;
+        history.replaceState(null, '', `#slide-${current + 1}`);
+      }
+
+      document.querySelector('#prev').addEventListener('click', () => show(current - 1));
+      document.querySelector('#next').addEventListener('click', () => show(current + 1));
+      document.querySelector('#print').addEventListener('click', () => window.print());
+      document.addEventListener('keydown', event => {
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(current + 1); }
+        if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+        if (event.key.toLowerCase() === 'p') window.print();
+      });
+
+      const match = window.location.hash.match(/slide-(\d+)/);
+      if (match) show(Number(match[1]) - 1);
+    })();
+  </script>
+</body>
+</html>

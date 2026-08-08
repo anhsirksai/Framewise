@@ -15,6 +15,7 @@ import {
 } from "@chakra-ui/react";
 import { Clapperboard, Sparkles } from "lucide-react";
 import { API_BASE } from "@/lib/config";
+import { friendlyError } from "@/lib/errors";
 
 interface ThemeSummary {
   id: string;
@@ -115,7 +116,7 @@ export function GenerationStudio() {
         return [nextTheme, ...prev.filter((item) => item.id !== nextTheme.id)].slice(0, 8);
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not generate rough cut.");
+      setError(err instanceof Error ? friendlyError(err.message) : "Could not generate rough cut.");
     } finally {
       setLoading(false);
     }
@@ -212,7 +213,7 @@ export function GenerationStudio() {
 
             {roughCut.render_error && (
               <Text fontSize="xs" color="orange.600" mt={2}>
-                Render not available: {roughCut.render_error}
+                Render not available: {friendlyError(roughCut.render_error)}
               </Text>
             )}
 

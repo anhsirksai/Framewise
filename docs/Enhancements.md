@@ -58,3 +58,19 @@ While verifying, I found you already have duplicates from your earlier runs — 
 Want me to clean those up? I'd delete the older copy of each duplicate from the TwelveLabs index and remove the corresponding Video + Segment nodes from Neo4j. It's destructive, so I won't do it without your go-ahead.
 
 ## ENH-3:
+```The set up is currently running all local. How do I host both the backend, frontend and injestion to show a demo on a live running page? I also want to change the repo name to Framewise instead of Framewise-Hackersquad. I want to make this change to github as well to make this my own since there are more features now. I also want to have UI with multiple tabs on the left. one for Injestion of videos(instead of having them in the data folder and doing make install, I should be able to upload a video.) Then we have this current page as -is. and host the entire thing. Like the neo4j docker, backend, UI. Can I use Vercel? how about fly.io?```
+
+![alt text](image.png)
+
+✅ Pushed to github.com/anhsirksai/Framewise. Docker build is validating in the background.
+
+Step 4: Your turn — two logins while the build runs:
+
+1. Fly.io — type this in the prompt (the ! runs it in this session so I can see the result):
+! flyctl auth login
+1. (Sign up at fly.io first if you haven't — free, needs a card for verification but we're using the cheap tier.)
+2. Aura — if you haven't yet: https://console.neo4j.io → Create instance → AuraDB Free → download credentials → paste me the URI + password.
+
+Once I have both, I'll: create the Fly app → set secrets (Anthropic key, TwelveLabs key, Aura creds) → fly deploy → then walk you through the 3-click Vercel setup pointed at the deployed backend URL.
+
+
