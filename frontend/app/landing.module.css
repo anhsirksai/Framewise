@@ -51,6 +51,11 @@
   color: var(--ink);
   text-decoration: none;
 }
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 
 /* ---- Buttons ---- */
 .btn {
@@ -334,6 +339,27 @@
   text-transform: uppercase;
 }
 
+/* ---- Demo ---- */
+.demoSection {
+  padding: 84px 0;
+  border-top: 1px solid var(--line);
+}
+.videoFrame {
+  margin-top: 44px;
+  overflow: hidden;
+  border: 1px solid var(--line-strong);
+  border-radius: 20px;
+  background: #111;
+  box-shadow: 0 18px 50px rgba(25, 25, 25, 0.12);
+}
+.demoVideo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1280 / 832;
+  background: #111;
+}
+
 /* ---- CTA / footer ---- */
 .cta {
   padding: 96px 0;
@@ -393,5 +419,19 @@
   .pipeArrow {
     transform: rotate(90deg);
     text-align: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .navInner {
+    padding-left: 18px;
+    padding-right: 18px;
+  }
+  .navActions {
+    gap: 6px;
+  }
+  .navActions a {
+    padding-left: 14px;
+    padding-right: 14px;
   }
 }

@@ -17,9 +17,19 @@ export default function LandingPage() {
           <Link href="/" className={styles.wordmark}>
             Framewise
           </Link>
-          <Link href="/app" className={styles.btnPrimary}>
-            Try it out
-          </Link>
+          <div className={styles.navActions}>
+            <a
+              href="https://framewise-ten.vercel.app/"
+              className={styles.btnGhost}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Demo
+            </a>
+            <Link href="/app" className={styles.btnPrimary}>
+              Try it out
+            </Link>
+          </div>
         </div>
       </nav>
 
@@ -247,6 +257,32 @@ export default function LandingPage() {
                 household record one question away.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ---- Demo ---- */}
+      <section className={styles.demoSection} id="demo">
+        <div className={styles.container}>
+          <span className={styles.kicker}>Product demo</span>
+          <h2 className={styles.sectionTitle}>
+            See Framewise <em className={styles.accent}>in action.</em>
+          </h2>
+          <p className={styles.sectionSub}>
+            Capture your records, ask questions in plain language, and retrieve
+            the evidence you need.
+          </p>
+          <div className={styles.videoFrame}>
+            <video
+              className={styles.demoVideo}
+              controls
+              playsInline
+              preload="metadata"
+              aria-label="Framewise product demonstration"
+            >
+              <source src="/framewise-demo.mp4" type="video/mp4" />
+              Your browser does not support embedded video.
+            </video>
           </div>
         </div>
       </section>
