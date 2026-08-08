@@ -44,7 +44,7 @@ export function VideoBrowser() {
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetch(`${API_BASE}/videos`, { signal: AbortSignal.timeout(10000) });
+        const res = await fetch(`${API_BASE}/videos`, { signal: AbortSignal.timeout(30000) });
         const data = await res.json();
         setVideos(data.videos || []);
       } catch {
@@ -61,7 +61,7 @@ export function VideoBrowser() {
     setSegLoading(true);
     try {
       const res = await fetch(`${API_BASE}/videos/${encodeURIComponent(v.id)}/segments`, {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.timeout(30000),
       });
       const data = await res.json();
       setSegments(data.segments || []);

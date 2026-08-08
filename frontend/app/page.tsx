@@ -86,7 +86,7 @@ export default function Home() {
       for (let attempt = 0; attempt < retries; attempt++) {
         try {
           const res = await fetch(`${API_BASE.replace("/api", "")}/health`, {
-            signal: AbortSignal.timeout(5000),
+            signal: AbortSignal.timeout(30000),
           });
           const data = await res.json();
           setBackendStatus(data.status === "ok" ? "ok" : "degraded");

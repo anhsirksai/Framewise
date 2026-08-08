@@ -199,7 +199,7 @@ export function ContextGraphView({ externalGraphData, onAskAbout }: ContextGraph
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/schema/visualization`, { signal: AbortSignal.timeout(10000) });
+      const res = await fetch(`${API_BASE}/schema/visualization`, { signal: AbortSignal.timeout(30000) });
       const data = await res.json();
       if (data.nodes && data.relationships) {
         // db.schema.visualization() returns serialized Node/Relationship objects
@@ -241,7 +241,7 @@ export function ContextGraphView({ externalGraphData, onAskAbout }: ContextGraph
             body: JSON.stringify({
               query: `MATCH (n:\`${label}\`)-[r]-(m) RETURN n, r, m LIMIT 50`,
             }),
-            signal: AbortSignal.timeout(10000),
+            signal: AbortSignal.timeout(30000),
           });
           const data = await res.json();
           const parsed = extractNodesAndRels(data.results || []);
@@ -267,7 +267,7 @@ export function ContextGraphView({ externalGraphData, onAskAbout }: ContextGraph
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ element_id: node.id }),
-          signal: AbortSignal.timeout(10000),
+          signal: AbortSignal.timeout(30000),
         });
         const data = await res.json();
         const expanded = extractNodesAndRels([data]);
