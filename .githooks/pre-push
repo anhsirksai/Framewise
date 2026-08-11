@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+# Prevent pushing commits that add or modify sensitive docs
+# Block if any path matches docs/principal_level.md or docs/staff_level.md
+
+get_changed() {
+  # If we have an upstream, compare to it; otherwise compare to HEAD
+  if git rev-parse --verify --quiet @{u} >/dev/null 2>&1; then
+    git diff --name-only --cached @{u}..HEAD
+  else
+    git diff --name-only --cached
+  fi
+}
+
+CHANGED=$(get_changed)
+if echo "$CHANGED" | grep -E "(^|/)docs/(principal_level|staff_level)\.md$" >/dev/null; then
+  echo "ERROR: Push blocked. Commits include docs/principal_level.md or docs/staff_level.md." 1>&2
+  echo "To keep these files local, add them to .gitignore and remove from the index (git rm --cached path)." 1>&2
+  exit 1
+fi
+
+exit 0
