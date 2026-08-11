@@ -36,3 +36,5 @@ data/generated/*
 !data/generated/.gitkeep
 data/videos/*.mp4
 data/*.pdf
+docs/principal_level.md
+docs/staff_level.md
